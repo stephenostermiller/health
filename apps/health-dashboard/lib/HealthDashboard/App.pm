@@ -7,7 +7,7 @@ use Exporter 'import';
 use JSON::PP;
 
 use HealthDashboard::Metrics qw(default_metric metrics_for_client metric_definition);
-use HealthDashboard::Queries qw(fetch_series_data);
+use HealthDashboard::Queries qw(fetch_series_data validate_range granularity_policy supported_granularities);
 
 our @EXPORT_OK = qw(render_dashboard_page render_series_response);
 
@@ -15,6 +15,7 @@ sub render_dashboard_page {
 	my $config = JSON::PP->new->ascii->canonical->encode({
 		defaultMetric => default_metric(),
 		metrics => metrics_for_client(),
+		granularities => granularity_policy(),
 	});
 
 	return <<"HTML";
@@ -41,11 +42,18 @@ sub render_dashboard_page {
       <div class="control">
         <label for="granularity">Granularity</label>
         <select id="granularity" name="granularity">
-          <option value="raw">Raw</option>
           <option value="day" selected>Day</option>
           <option value="week">Week</option>
           <option value="month">Month</option>
           <option value="year">Year</option>
+        </select>
+      </div>
+      <div class="control">
+        <label for="aggregation">Aggregation</label>
+        <select id="aggregation" name="aggregation">
+          <option value="mean" selected>Average</option>
+          <option value="min">Minimum</option>
+          <option value="max">Maximum</option>
         </select>
       </div>
       <div class="control">
@@ -61,6 +69,8 @@ sub render_dashboard_page {
         <button type="submit">Update chart</button>
       </div>
     </form>
+
+    <div id="range-error" class="range-error" role="alert"></div>
 
     <section class="chart-panel">
       <div style="height: 420px;">
@@ -87,10 +97,30 @@ sub render_series_response {
 	my $params = _parse_query_string($args{query_string} // '');
 	my $metric = $params->{metric} || default_metric();
 	my $granularity = $params->{granularity} || 'day';
+	my $aggregation = $params->{aggregation} || 'mean';
 	my $definition = metric_definition($metric);
 
 	if (!$definition) {
 		return _json_response(400, { error => 'Unknown metric' });
+	}
+
+	my %valid_granularity = map { $_ => 1 } supported_granularities();
+	if (!$valid_granularity{$granularity}) {
+		return _json_response(400, { error => 'Unsupported granularity' });
+	}
+
+	my %valid_aggregation = map { $_ => 1 } qw(mean min max);
+	if (!$valid_aggregation{$aggregation}) {
+		return _json_response(400, { error => 'Unsupported aggregation' });
+	}
+
+	my $range_error = validate_range(
+		granularity => $granularity,
+		start => $params->{start},
+		end => $params->{end},
+	);
+	if ($range_error) {
+		return _json_response(400, { error => $range_error });
 	}
 
 	my $result;
@@ -98,6 +128,7 @@ sub render_series_response {
 		$result = fetch_series_data(
 			metric => $metric,
 			granularity => $granularity,
+			aggregation => $aggregation,
 			start => $params->{start},
 			end => $params->{end},
 			definition => $definition,
