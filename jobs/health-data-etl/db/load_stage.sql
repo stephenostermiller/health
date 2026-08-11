@@ -5,8 +5,6 @@ INSERT INTO metric_fact (
     user_id,
     value,
     data_source,
-    source_file,
-    source_row,
     end_timestamp,
     loaded_at
 )
@@ -17,8 +15,6 @@ SELECT
     45016898 AS user_id,
     s.value,
     NULLIF(s.data_source, ''),
-    s.source_file,
-    s.source_row,
     s.end_timestamp,
     CURRENT_TIMESTAMP
 FROM csv_metric_stage AS s

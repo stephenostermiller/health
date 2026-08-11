@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Exporter 'import';
+use JSON::PP;
 use Time::Local qw(timegm);
 
 use HealthDashboard::DB qw(connect_db primary_user_id);
@@ -82,6 +83,52 @@ sub fetch_series_data {
 		max => 'maximum',
 	);
 
+	my $false = JSON::PP::false;
+	my @datasets;
+	if ($aggregation eq 'range') {
+		@datasets = (
+			{
+				label => ($definition->{label} || $metric) . ' minimum',
+				data => [map { 0 + $_->{min} } @$rows],
+				borderColor => 'rgba(53, 92, 125, 0)',
+				backgroundColor => 'rgba(53, 92, 125, 0.2)',
+				borderWidth => 0,
+				fill => $false,
+				tension => 0.2,
+				pointRadius => 0,
+			},
+			{
+				label => ($definition->{label} || $metric) . ' maximum',
+				data => [map { 0 + $_->{max} } @$rows],
+				borderColor => 'rgba(53, 92, 125, 0)',
+				backgroundColor => 'rgba(53, 92, 125, 0.2)',
+				borderWidth => 0,
+				fill => '-1',
+				tension => 0.2,
+				pointRadius => 0,
+			},
+			{
+				label => ($definition->{label} || $metric) . ' average',
+				data => [map { 0 + $_->{mean} } @$rows],
+				borderColor => $definition->{color} || '#355c7d',
+				backgroundColor => 'rgba(53, 92, 125, 0)',
+				borderWidth => 2,
+				fill => $false,
+				tension => 0.2,
+			},
+		);
+	} else {
+		@datasets = (
+			{
+				label => ($definition->{label} || $metric) . ' ' . $aggregation_labels{$aggregation},
+				data => [map { 0 + $_->{$aggregation} } @$rows],
+				borderColor => $definition->{color} || '#355c7d',
+				backgroundColor => 'rgba(53, 92, 125, 0.15)',
+				tension => 0.2,
+			},
+		);
+	}
+
 	return {
 		metric => $metric,
 		label => $definition->{label} || $metric,
@@ -95,15 +142,7 @@ sub fetch_series_data {
 			availableMax => $available->{max},
 		},
 		labels => [map { $_->{label} } @$rows],
-		datasets => [
-			{
-				label => ($definition->{label} || $metric) . ' ' . $aggregation_labels{$aggregation},
-				data => [map { 0 + $_->{$aggregation} } @$rows],
-				borderColor => $definition->{color} || '#355c7d',
-				backgroundColor => 'rgba(53, 92, 125, 0.15)',
-				tension => 0.2,
-			},
-		],
+		datasets => \@datasets,
 	};
 }
 

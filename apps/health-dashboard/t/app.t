@@ -3,6 +3,7 @@ use warnings;
 
 use File::Spec;
 use FindBin;
+use JSON::PP;
 use Test::More;
 
 use lib File::Spec->catdir($FindBin::Bin, '..', 'lib');

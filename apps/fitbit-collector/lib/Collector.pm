@@ -8,6 +8,7 @@ use POSIX qw(strftime);
 
 use Protocol qw(parse_request);
 use Collector::DB qw(connect_db);
+use ResponseBuilder qw(build_response);
 
 our @EXPORT_OK = qw(handle_request capture_request_body build_metric_facts);
 
@@ -34,13 +35,15 @@ sub handle_request {
 
 	$dbh->disconnect;
 
+	my $response_body = build_response();
+
 	return {
 		status => 200,
 		headers => [
-			'Content-Type' => 'text/plain',
-			'Content-Length' => 3,
+			'Content-Type' => 'application/octet-stream',
+			'Content-Length' => length($response_body),
 		],
-		body => "OK\n",
+		body => $response_body,
 	};
 }
 
@@ -74,11 +77,9 @@ sub build_metric_facts {
 			metric => 'weight',
 			unit => 'lb',
 			user_id => $reading->{user_id},
-			value => sprintf('%.1f', $reading->{weight_lbs}),
+			value => $reading->{weight_lbs},
 			timestamp => $timestamp,
 			data_source => 'fitbit-aria',
-			source_file => "aria:$mac",
-			source_row => $i,
 		};
 
 		push @facts, {
@@ -88,8 +89,6 @@ sub build_metric_facts {
 			value => $reading->{impedance},
 			timestamp => $timestamp,
 			data_source => 'fitbit-aria',
-			source_file => "aria:$mac",
-			source_row => $i,
 		};
 
 		push @facts, {
@@ -99,8 +98,6 @@ sub build_metric_facts {
 			value => $reading->{body_fat_1},
 			timestamp => $timestamp,
 			data_source => 'fitbit-aria',
-			source_file => "aria:$mac",
-			source_row => $i,
 		};
 
 		push @facts, {
@@ -110,8 +107,6 @@ sub build_metric_facts {
 			value => $reading->{body_fat_2},
 			timestamp => $timestamp,
 			data_source => 'fitbit-aria',
-			source_file => "aria:$mac",
-			source_row => $i,
 		};
 
 		push @facts, {
@@ -121,8 +116,6 @@ sub build_metric_facts {
 			value => $reading->{covariance},
 			timestamp => $timestamp,
 			data_source => 'fitbit-aria',
-			source_file => "aria:$mac",
-			source_row => $i,
 		};
 	}
 
@@ -134,8 +127,8 @@ sub _persist_facts {
 
 	for my $fact (@$facts) {
 		$dbh->do(
-			'INSERT INTO metric_fact (timestamp, metric, unit, user_id, value, data_source, source_file, source_row, loaded_at)
-			 VALUES (?, ?, ?, ?, ?, ?, CAST(? AS CHAR) COLLATE utf8mb4_unicode_ci, ?, CURRENT_TIMESTAMP)
+			'INSERT INTO metric_fact (timestamp, metric, unit, user_id, value, data_source, loaded_at)
+			 VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
 			 ON DUPLICATE KEY UPDATE unit=VALUES(unit), value=VALUES(value), data_source=VALUES(data_source), loaded_at=CURRENT_TIMESTAMP',
 			undef,
 			$fact->{timestamp},
@@ -144,8 +137,6 @@ sub _persist_facts {
 			$fact->{user_id},
 			$fact->{value},
 			$fact->{data_source},
-			$fact->{source_file},
-			$fact->{source_row},
 		);
 	}
 }

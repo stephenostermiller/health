@@ -72,16 +72,48 @@
     });
   }
 
-  function renderChart(payload) {
+  function dateToTimestamp(dateStr) {
+    return new Date(dateStr).getTime();
+  }
+
+  function yearToTimestamp(yearStr) {
+    return new Date(yearStr + '-01-01').getTime();
+  }
+
+  function renderChart(payload, granularity) {
     const context = byId('health-chart');
     if (chart) {
       chart.destroy();
     }
+
+    let converter, labelFormatter;
+    if (granularity === 'year') {
+      converter = yearToTimestamp;
+      labelFormatter = (value) => new Date(value).getFullYear().toString();
+    } else if (granularity === 'month') {
+      converter = dateToTimestamp;
+      labelFormatter = (value) => new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+    } else {
+      converter = dateToTimestamp;
+      labelFormatter = (value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    timestamps = payload.labels.map(converter);
+    const minTime = Math.min(...timestamps);
+    const maxTime = Math.max(...timestamps);
+
+    const transformedDatasets = payload.datasets.map(dataset => ({
+      ...dataset,
+      data: payload.labels.map((label, i) => ({
+        x: converter(label),
+        y: dataset.data[i],
+      })),
+    }));
+
     chart = new Chart(context, {
       type: 'line',
       data: {
-        labels: payload.labels,
-        datasets: payload.datasets,
+        datasets: transformedDatasets,
       },
       options: {
         responsive: true,
@@ -91,6 +123,14 @@
           intersect: false,
         },
         scales: {
+          x: {
+            type: 'linear',
+            min: minTime,
+            max: maxTime,
+            ticks: {
+              callback: labelFormatter,
+            },
+          },
           y: {
             title: {
               display: Boolean(payload.unit),
@@ -105,9 +145,10 @@
   async function loadSeries() {
     const start = byId('start').value;
     const end = byId('end').value;
+    const granularity = byId('granularity').value;
     const params = new URLSearchParams({
       metric: byId('metric').value,
-      granularity: byId('granularity').value,
+      granularity: granularity,
       aggregation: byId('aggregation').value,
     });
     if (start && end) {
@@ -124,7 +165,7 @@
       throw new Error(payload.error || 'Request failed');
     }
     applyRange(payload.range);
-    renderChart(payload);
+    renderChart(payload, granularity);
     updateSummary(payload);
     byId('chart-status').textContent = '';
   }

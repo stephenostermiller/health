@@ -51,7 +51,8 @@ sub render_dashboard_page {
       <div class="control">
         <label for="aggregation">Aggregation</label>
         <select id="aggregation" name="aggregation">
-          <option value="mean" selected>Average</option>
+          <option value="range" selected>Range (Min/Avg/Max)</option>
+          <option value="mean">Average</option>
           <option value="min">Minimum</option>
           <option value="max">Maximum</option>
         </select>
@@ -97,7 +98,7 @@ sub render_series_response {
 	my $params = _parse_query_string($args{query_string} // '');
 	my $metric = $params->{metric} || default_metric();
 	my $granularity = $params->{granularity} || 'day';
-	my $aggregation = $params->{aggregation} || 'mean';
+	my $aggregation = $params->{aggregation} || 'range';
 	my $definition = metric_definition($metric);
 
 	if (!$definition) {
@@ -109,7 +110,7 @@ sub render_series_response {
 		return _json_response(400, { error => 'Unsupported granularity' });
 	}
 
-	my %valid_aggregation = map { $_ => 1 } qw(mean min max);
+	my %valid_aggregation = map { $_ => 1 } qw(range mean min max);
 	if (!$valid_aggregation{$aggregation}) {
 		return _json_response(400, { error => 'Unsupported aggregation' });
 	}

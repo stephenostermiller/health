@@ -3,7 +3,7 @@
 
 ALTER TABLE metric_fact ADD COLUMN user_id BIGINT UNSIGNED NOT NULL DEFAULT 45016898;
 ALTER TABLE metric_fact DROP PRIMARY KEY;
-ALTER TABLE metric_fact ADD PRIMARY KEY (`timestamp`, metric, user_id, source_file, source_row);
+ALTER TABLE metric_fact ADD PRIMARY KEY (`timestamp`, metric, user_id);
 ALTER TABLE metric_fact ADD KEY idx_metric_fact_user_metric_time (user_id, metric, `timestamp`);
 
 ALTER TABLE metric_aggregate_day DROP COLUMN IF EXISTS median;

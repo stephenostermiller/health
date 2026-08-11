@@ -39,16 +39,12 @@ is(scalar(@$facts), 10, 'collector generates 5 metrics per 2 readings');
 
 my @weight_facts = grep { $_->{metric} eq 'weight' } @$facts;
 is(scalar(@weight_facts), 2, 'weight facts for both readings');
-is($weight_facts[0]->{value}, 155.4, 'guest reading weight in pounds');
-is($weight_facts[1]->{value}, 179.1, 'registered reading weight in pounds');
+is($weight_facts[0]->{value}, 155.42328042328, 'guest reading weight in pounds');
+is($weight_facts[1]->{value}, 179.087301587302, 'registered reading weight in pounds');
 
 is($weight_facts[0]->{user_id}, 0, 'guest reading user_id');
 is($weight_facts[1]->{user_id}, 42, 'registered reading user_id');
 
-is($weight_facts[0]->{source_row}, 0, 'first reading is source_row 0');
-is($weight_facts[1]->{source_row}, 1, 'second reading is source_row 1');
-
-is($weight_facts[0]->{source_file}, 'aria:aa:bb:cc:dd:ee', 'source_file uses MAC address');
 like($weight_facts[0]->{timestamp}, qr/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/, 'timestamp is ISO format');
 
 my @impedance_facts = grep { $_->{metric} eq 'body_composition.impedance' } @$facts;
