@@ -1,21 +1,10 @@
-# Fitbit-Spoof Monorepo
+# Health data collector, importer and viewer
 
 This repository contains three projects:
 
 - `apps/fitbit-collector/` — a Perl CGI app that receives Fitbit Aria uploads and writes metrics directly to MySQL.
 - `jobs/health-data-etl/` — the CSV-to-MySQL ETL job that normalizes exported health data into fact and aggregate tables.
 - `apps/health-dashboard/` — a Perl CGI dashboard app that reads from MySQL and renders charts with Chart.js.
-
-## Layout
-
-```text
-apps/
-	fitbit-collector/
-	health-dashboard/
-jobs/
-	health-data-etl/
-Takeout/
-```
 
 ## Setup Order
 
