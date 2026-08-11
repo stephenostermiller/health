@@ -1,0 +1,41 @@
+{
+   "battery" : 95,
+   "checksum" : {
+      "computed" : 40539,
+      "provided" : 40539,
+      "valid" : true
+   },
+   "date" : 1704067200,
+   "firmware" : 39,
+   "friendly_date" : "Monday 1st January 2024, 12:00am UTC",
+   "item_count" : 2,
+   "mac" : "aa:bb:cc:dd:ee",
+   "protocol" : 3,
+   "raw_record_count" : 2,
+   "readings" : [
+      {
+         "body_fat_1" : 1234,
+         "body_fat_2" : 91011,
+         "covariance" : 5678,
+         "date" : 1704067260,
+         "friendly_date" : "Monday 1st January 2024, 12:01am UTC",
+         "impedance" : 501,
+         "user_id" : 0,
+         "weight_kg" : 70.5,
+         "weight_lbs" : 155.42328042328,
+         "weight_st" : 11.1018499461363
+      },
+      {
+         "body_fat_1" : 1111,
+         "body_fat_2" : 3333,
+         "covariance" : 2222,
+         "date" : 1704067320,
+         "friendly_date" : "Monday 1st January 2024, 12:02am UTC",
+         "impedance" : 650,
+         "user_id" : 42,
+         "weight_kg" : 81.234,
+         "weight_lbs" : 179.087301587302,
+         "weight_st" : 12.7921656528289
+      }
+   ]
+}

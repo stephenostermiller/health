@@ -1,0 +1,7 @@
+data
+csv
+tmp*
+*tmp
+.env
+plan-*
+__pycache__

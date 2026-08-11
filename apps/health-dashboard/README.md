@@ -1,0 +1,51 @@
+# Health Dashboard
+
+This project is a Perl CGI web app that reads the ETL MySQL schema and renders health charts with Chart.js.
+
+## Project Layout
+
+- `htdocs/index.cgi` — HTML shell for the dashboard UI.
+- `htdocs/api/series.cgi` — JSON endpoint for chart data.
+- `htdocs/static/` — CSS, application JavaScript, and vendored Chart.js.
+- `lib/HealthDashboard/` — DB, query, metric, and app modules.
+- `apache/` — Apache vhost template.
+- `script/` — smoke-test and setup helpers.
+- `t/` — module-level tests.
+
+## Environment
+
+The dashboard reads a `.env` file in the project root (or environment variables) for:
+
+- `MYSQL_USER`
+- `MYSQL_PASSWORD`
+- `MYSQL_HOST`
+- `MYSQL_PORT`
+- `MYSQL_DATABASE`
+- `PRIMARY_USER_ID` (default: 45016898) — the Aria profile ID to display metrics for
+
+Example `.env`:
+
+```
+MYSQL_USER=your_username
+MYSQL_PASSWORD=your_password
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_DATABASE=health
+PRIMARY_USER_ID=45016898
+```
+
+Environment variables (from Apache `SetEnv`, OS environment, etc.) take precedence over `.env` file values.
+
+## Routes
+
+- `/` — dashboard page
+- `/api/series.cgi?metric=weight&granularity=day` — JSON chart data
+
+## Development
+
+```sh
+make test
+make smoke
+```
+
+The dashboard expects the ETL schema to be loaded first.
