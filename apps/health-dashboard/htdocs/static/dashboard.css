@@ -97,3 +97,11 @@ body {
     margin-top: 12px;
     min-height: 1.2rem;
 }
+
+.date-control {
+    display: none !important;
+}
+
+.date-control.visible {
+    display: block !important;
+}

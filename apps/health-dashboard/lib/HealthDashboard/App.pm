@@ -58,10 +58,14 @@ sub render_dashboard_page {
         </select>
       </div>
       <div class="control">
+        <label for="time-period">Time period</label>
+        <select id="time-period" name="time-period"></select>
+      </div>
+      <div class="control date-control" style="display: none;">
         <label for="start">Start</label>
         <input id="start" name="start" type="date">
       </div>
-      <div class="control">
+      <div class="control date-control" style="display: none;">
         <label for="end">End</label>
         <input id="end" name="end" type="date">
       </div>

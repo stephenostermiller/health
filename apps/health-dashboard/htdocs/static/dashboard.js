@@ -2,6 +2,41 @@
   const config = window.dashboardConfig;
   let chart;
 
+  const timePeriods = {
+    day: [
+      { label: 'Last 7 days', days: 7 },
+      { label: 'Last 30 days', days: 30 },
+      { label: 'Last 180 days', days: 180, default: true },
+      { label: 'Last 365 days', days: 365 },
+      { label: 'Last 2 years', days: 730 },
+      { label: 'Custom', custom: true },
+    ],
+    week: [
+      { label: 'Last 12 weeks', weeks: 12 },
+      { label: 'Last 26 weeks', weeks: 26 },
+      { label: 'Last 52 weeks', weeks: 52 },
+      { label: 'Last 2 years', weeks: 104, default: true },
+      { label: 'Last 3 years', weeks: 156 },
+      { label: 'Last 4 years', weeks: 208 },
+      { label: 'Custom', custom: true },
+    ],
+    month: [
+      { label: 'Last 6 months', months: 6 },
+      { label: 'Last 12 months', months: 12 },
+      { label: 'Last 2 years', months: 24 },
+      { label: 'Last 3 years', months: 36, default: true },
+      { label: 'Last 5 years', months: 60 },
+      { label: 'Last 10 years', months: 120 },
+      { label: 'Custom', custom: true },
+    ],
+    year: [
+      { label: 'All data', allData: true, default: true },
+      { label: 'Last 5 years', years: 5 },
+      { label: 'Last 10 years', years: 10 },
+      { label: 'Custom', custom: true },
+    ],
+  };
+
   function byId(id) {
     return document.getElementById(id);
   }
@@ -17,6 +52,57 @@
       }
       select.appendChild(option);
     });
+  }
+
+  function populateTimePeriods(granularity) {
+    const select = byId('time-period');
+    select.innerHTML = '';
+    const periods = timePeriods[granularity] || [];
+    periods.forEach((period) => {
+      const option = document.createElement('option');
+      option.value = period.label;
+      option.textContent = period.label;
+      option.dataset.custom = period.custom ? 'true' : 'false';
+      if (period.default) {
+        option.selected = true;
+      }
+      select.appendChild(option);
+    });
+  }
+
+  function calculateDateRange(granularity, periodLabel) {
+    const periods = timePeriods[granularity] || [];
+    const period = periods.find(p => p.label === periodLabel);
+    if (!period || period.custom || period.allData) return null;
+
+    const today = new Date();
+    const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    let startDate = new Date(endDate);
+
+    if (period.days) {
+      startDate.setDate(startDate.getDate() - period.days);
+    } else if (period.weeks) {
+      startDate.setDate(startDate.getDate() - period.weeks * 7);
+    } else if (period.months) {
+      startDate.setMonth(startDate.getMonth() - period.months);
+    } else if (period.years) {
+      startDate.setFullYear(startDate.getFullYear() - period.years);
+    }
+
+    const formatDate = (date) => date.toISOString().split('T')[0];
+    return {
+      start: formatDate(startDate),
+      end: formatDate(endDate),
+    };
+  }
+
+  function setDateInputVisibility(isCustom) {
+    const dateControls = document.querySelectorAll('.date-control');
+    if (isCustom) {
+      dateControls.forEach(control => control.classList.add('visible'));
+    } else {
+      dateControls.forEach(control => control.classList.remove('visible'));
+    }
   }
 
   function subtractCalendarMonths(ymd, n) {
@@ -95,7 +181,16 @@
       labelFormatter = (value) => new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
     } else {
       converter = dateToTimestamp;
-      labelFormatter = (value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+      // Check if data spans multiple years
+      const years = payload.labels.map(label => new Date(label).getFullYear());
+      const spansMultipleYears = Math.min(...years) !== Math.max(...years);
+
+      if (spansMultipleYears) {
+        labelFormatter = (value) => new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+      } else {
+        labelFormatter = (value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
     }
 
     timestamps = payload.labels.map(converter);
@@ -121,6 +216,17 @@
         interaction: {
           mode: 'index',
           intersect: false,
+        },
+        plugins: {
+          tooltip: {
+            callbacks: {
+              title: (context) => {
+                if (!context.length) return '';
+                const timestamp = context[0].parsed.x;
+                return labelFormatter(timestamp);
+              },
+            },
+          },
         },
         scales: {
           x: {
@@ -174,9 +280,33 @@
     byId('start').value = '';
     byId('end').value = '';
     byId('range-error').textContent = '';
+    const granularity = byId('granularity').value;
+    populateTimePeriods(granularity);
+    setDateInputVisibility(false);
     loadSeries().catch((error) => {
       byId('chart-status').textContent = error.message;
     });
+  }
+
+  function handleTimePeriodChange(event) {
+    const periodLabel = byId('time-period').value;
+    const granularity = byId('granularity').value;
+    const isCustom = event.target.selectedOptions[0].dataset.custom === 'true';
+
+    if (isCustom) {
+      setDateInputVisibility(true);
+    } else {
+      const dateRange = calculateDateRange(granularity, periodLabel);
+      if (dateRange) {
+        byId('start').value = dateRange.start;
+        byId('end').value = dateRange.end;
+      }
+      setDateInputVisibility(false);
+      byId('range-error').textContent = '';
+      loadSeries().catch((error) => {
+        byId('chart-status').textContent = error.message;
+      });
+    }
   }
 
   function handleDateInputChange(event) {
@@ -207,9 +337,13 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     populateMetrics();
+    const granularity = byId('granularity').value;
+    populateTimePeriods(granularity);
+    setDateInputVisibility(false);
     byId('metric').addEventListener('change', handleContextChange);
     byId('granularity').addEventListener('change', handleContextChange);
     byId('aggregation').addEventListener('change', handleContextChange);
+    byId('time-period').addEventListener('change', handleTimePeriodChange);
     byId('start').addEventListener('change', handleDateInputChange);
     byId('end').addEventListener('change', handleDateInputChange);
     byId('controls').addEventListener('submit', handleSubmit);
