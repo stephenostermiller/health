@@ -5,7 +5,8 @@ use warnings;
 
 use Exporter 'import';
 use File::Spec;
-use FindBin;
+use File::Basename qw(dirname);
+use Cwd qw(abs_path);
 
 our @EXPORT_OK = qw(connect_db primary_user_id);
 
@@ -39,7 +40,9 @@ sub connect_db {
 sub _load_env_file {
 	return if $ENV{MYSQL_USER};
 
-	my $env_file = File::Spec->catfile($FindBin::Bin, '..', '..', '..', '..', '.env');
+	# Build path then normalize to resolve .. components
+	my $env_file = abs_path(File::Spec->catfile(abs_path(__FILE__), '..', '..', '..', '..', '..', '.env'));
+
 	return unless -f $env_file;
 
 	open(my $fh, '<', $env_file) or return;

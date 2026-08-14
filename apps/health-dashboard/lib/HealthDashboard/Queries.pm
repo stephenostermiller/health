@@ -31,7 +31,7 @@ my %AGGREGATES = (
 		period_column => 'month_start_date',
 		period_type => 'date',
 		default_span_months => 36,
-		max_span_months => 144,
+		max_span_months => 288,
 	},
 	year => {
 		table => 'metric_aggregate_year',
@@ -46,10 +46,10 @@ sub fetch_series_data {
 	my $granularity = $args{granularity} || 'day';
 	my $aggregation = $args{aggregation} || 'mean';
 	my $definition = $args{definition} || {};
+	my $user_id = $args{user_id} // primary_user_id();
 
 	my $aggregate = $AGGREGATES{$granularity} or die "Unsupported granularity\n";
 	my $dbh = connect_db();
-	my $user_id = primary_user_id();
 
 	my $available = _available_range($dbh, $aggregate, $metric, $user_id);
 	my ($start, $end) = _resolve_start_end($aggregate, $available, $args{start}, $args{end});
@@ -88,22 +88,12 @@ sub fetch_series_data {
 	if ($aggregation eq 'range') {
 		@datasets = (
 			{
-				label => ($definition->{label} || $metric) . ' minimum',
-				data => [map { 0 + $_->{min} } @$rows],
-				borderColor => 'rgba(53, 92, 125, 0)',
-				backgroundColor => 'rgba(53, 92, 125, 0.2)',
-				borderWidth => 0,
-				fill => $false,
-				tension => 0.2,
-				pointRadius => 0,
-			},
-			{
 				label => ($definition->{label} || $metric) . ' maximum',
 				data => [map { 0 + $_->{max} } @$rows],
 				borderColor => 'rgba(53, 92, 125, 0)',
 				backgroundColor => 'rgba(53, 92, 125, 0.2)',
 				borderWidth => 0,
-				fill => '-1',
+				fill => $false,
 				tension => 0.2,
 				pointRadius => 0,
 			},
@@ -115,6 +105,16 @@ sub fetch_series_data {
 				borderWidth => 2,
 				fill => $false,
 				tension => 0.2,
+			},
+			{
+				label => ($definition->{label} || $metric) . ' minimum',
+				data => [map { 0 + $_->{min} } @$rows],
+				borderColor => 'rgba(53, 92, 125, 0)',
+				backgroundColor => 'rgba(53, 92, 125, 0.2)',
+				borderWidth => 0,
+				fill => 0,
+				tension => 0.2,
+				pointRadius => 0,
 			},
 		);
 	} else {

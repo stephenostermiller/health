@@ -8,14 +8,37 @@ use JSON::PP;
 
 use HealthDashboard::Metrics qw(default_metric metrics_for_client metric_definition);
 use HealthDashboard::Queries qw(fetch_series_data validate_range granularity_policy supported_granularities);
+use HealthDashboard::Auth qw(get_user_id_from_cookie authenticate_user create_auth_cookie set_user_password get_user_by_id_or_name user_exists);
 
 our @EXPORT_OK = qw(render_dashboard_page render_series_response);
 
 sub render_dashboard_page {
+	my (%args) = @_;
+	my $cookie = $args{cookie};
+
+	my $user_id = get_user_id_from_cookie(cookie => $cookie);
+
+	if (!$user_id) {
+		return _render_login_page();
+	}
+
+	return _render_authenticated_dashboard($user_id);
+}
+
+sub _render_authenticated_dashboard {
+	my ($user_id) = @_;
+
+	my $user = get_user_by_id_or_name(login => $user_id);
+	my $user_name = $user ? $user->{name} : 'User';
+	my $user_height = $user ? ($user->{height_mm} || '') : '';
+
 	my $config = JSON::PP->new->ascii->canonical->encode({
 		defaultMetric => default_metric(),
 		metrics => metrics_for_client(),
 		granularities => granularity_policy(),
+		userId => $user_id,
+		userName => $user_name,
+		userHeight => $user_height,
 	});
 
 	return <<"HTML";
@@ -30,9 +53,69 @@ sub render_dashboard_page {
 <body>
   <div class="page">
     <section class="hero">
-      <h1>Health dashboard</h1>
-      <p>Explore imported health metrics from MySQL using the shared ETL fact and aggregate tables.</p>
+      <div>
+        <h1>Health dashboard</h1>
+        <p>Welcome, $user_name</p>
+      </div>
+      <div class="menu-container">
+        <button id="menu-toggle" class="menu-toggle" aria-label="Menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+        <div id="menu" class="menu">
+          <button id="menu-edit-name" class="menu-item">Edit Name</button>
+          <button id="menu-edit-height" class="menu-item">Edit Height</button>
+          <button id="menu-logout" class="menu-item menu-logout">Logout</button>
+        </div>
+      </div>
     </section>
+
+    <div id="edit-name-modal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Edit Name</h2>
+        <form id="edit-name-form">
+          <label for="new-name">Name:</label>
+          <input type="text" id="new-name" name="new-name" required maxlength="20">
+          <button type="submit">Save</button>
+        </form>
+      </div>
+    </div>
+
+    <div id="edit-height-modal" class="modal">
+      <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Edit Height</h2>
+        <form id="edit-height-form">
+          <div class="height-unit-selector">
+            <label>
+              <input type="radio" name="height-unit" value="imperial" checked> Feet/Inches
+            </label>
+            <label>
+              <input type="radio" name="height-unit" value="metric"> Meters
+            </label>
+          </div>
+          <div id="imperial-inputs" class="height-inputs">
+            <div class="height-input-group">
+              <label for="height-feet">Feet:</label>
+              <input type="number" id="height-feet" name="height-feet" min="0" max="9">
+            </div>
+            <div class="height-input-group">
+              <label for="height-inches">Inches:</label>
+              <input type="number" id="height-inches" name="height-inches" min="0" max="11" step="0.5">
+            </div>
+          </div>
+          <div id="metric-inputs" class="height-inputs" style="display: none;">
+            <div class="height-input-group">
+              <label for="height-meters">Height (m):</label>
+              <input type="number" id="height-meters" name="height-meters" min="0" step="0.01">
+            </div>
+          </div>
+          <button type="submit">Save</button>
+        </form>
+      </div>
+    </div>
 
     <form id="controls" class="controls">
       <div class="control">
@@ -69,10 +152,6 @@ sub render_dashboard_page {
         <label for="end">End</label>
         <input id="end" name="end" type="date">
       </div>
-      <div class="control">
-        <label>&nbsp;</label>
-        <button type="submit">Update chart</button>
-      </div>
     </form>
 
     <div id="range-error" class="range-error" role="alert"></div>
@@ -100,6 +179,7 @@ HTML
 sub render_series_response {
 	my (%args) = @_;
 	my $params = _parse_query_string($args{query_string} // '');
+	my $user_id = $args{user_id};
 	my $metric = $params->{metric} || default_metric();
 	my $granularity = $params->{granularity} || 'day';
 	my $aggregation = $params->{aggregation} || 'range';
@@ -137,6 +217,7 @@ sub render_series_response {
 			start => $params->{start},
 			end => $params->{end},
 			definition => $definition,
+			user_id => $user_id,
 		);
 		1;
 	} or do {
@@ -146,6 +227,157 @@ sub render_series_response {
 	};
 
 	return _json_response(200, $result);
+}
+
+sub _render_login_page {
+	return <<"HTML";
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Health Dashboard Login</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    .login-box {
+      background: white;
+      padding: 40px;
+      border-radius: 8px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+      width: 100%;
+      max-width: 400px;
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+      margin-top: 0;
+    }
+    .form-group {
+      margin-bottom: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      color: #555;
+      font-weight: 500;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #5568d3;
+    }
+    .error {
+      color: #e74c3c;
+      margin-bottom: 15px;
+      padding: 10px;
+      background: #fadbd8;
+      border-radius: 4px;
+      display: none;
+    }
+    .message {
+      color: #27ae60;
+      margin-bottom: 15px;
+      padding: 10px;
+      background: #d5f4e6;
+      border-radius: 4px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <h1>Health Dashboard</h1>
+    <div class="error" id="error"></div>
+    <div class="message" id="message"></div>
+
+    <form id="login-form">
+      <div class="form-group">
+        <label for="login">Name or User ID</label>
+        <input type="text" id="login" name="login" required autofocus>
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required>
+      </div>
+      <button type="submit">Login</button>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const login = document.getElementById('login').value;
+      const password = document.getElementById('password').value;
+
+      try {
+        const response = await fetch('api/auth.cgi', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'login', login, password })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          document.cookie = 'auth=' + data.cookie + '; path=/; max-age=2592000';
+          window.location.reload();
+        } else if (data.needsPassword) {
+          const newPassword = prompt('Set a password for this account:');
+          if (newPassword) {
+            const setResponse = await fetch('api/auth.cgi', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ action: 'set_password', login, password: newPassword })
+            });
+            const setData = await setResponse.json();
+            if (setData.success) {
+              document.getElementById('message').textContent = 'Password set! Please login.';
+              document.getElementById('message').style.display = 'block';
+            }
+          }
+        } else {
+          document.getElementById('error').textContent = data.error || 'Login failed';
+          document.getElementById('error').style.display = 'block';
+        }
+      } catch (err) {
+        document.getElementById('error').textContent = 'Error: ' + err.message;
+        document.getElementById('error').style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>
+HTML
 }
 
 sub _json_response {

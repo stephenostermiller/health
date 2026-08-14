@@ -13,6 +13,7 @@ body {
 
 .hero {
     margin-bottom: 24px;
+    position: relative;
 }
 
 .hero h1 {
@@ -24,6 +25,95 @@ body {
 .hero p {
     max-width: 42rem;
     font-size: 1.05rem;
+}
+
+.menu-container {
+    position: absolute;
+    top: 0;
+    right: 0;
+}
+
+.menu-toggle {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 12px;
+    width: 50px;
+    height: 50px;
+}
+
+.menu-toggle span {
+    display: block;
+    width: 24px;
+    height: 3px;
+    background: #204d3b;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+}
+
+.menu-toggle.active span:nth-child(1) {
+    transform: rotate(45deg) translate(8px, 8px);
+}
+
+.menu-toggle.active span:nth-child(2) {
+    opacity: 0;
+}
+
+.menu-toggle.active span:nth-child(3) {
+    transform: rotate(-45deg) translate(7px, -7px);
+}
+
+.menu {
+    position: absolute;
+    top: 50px;
+    right: 0;
+    background: white;
+    border: 1px solid rgba(28, 42, 36, 0.15);
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 160px;
+    display: none;
+    flex-direction: column;
+    z-index: 100;
+}
+
+.menu.active {
+    display: flex;
+}
+
+.menu-item {
+    padding: 12px 16px;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    color: #1c2a24;
+    font-size: 0.95rem;
+    transition: background 0.2s ease;
+}
+
+.menu-item:hover {
+    background: #f4f8f1;
+}
+
+.menu-item:first-child {
+    border-radius: 10px 10px 0 0;
+}
+
+.menu-item:last-child {
+    border-radius: 0 0 10px 10px;
+}
+
+.menu-logout {
+    color: #d32f2f;
+    border-top: 1px solid rgba(28, 42, 36, 0.1);
+}
+
+.menu-logout:hover {
+    background: #fadbd8;
 }
 
 .controls {
@@ -104,4 +194,149 @@ body {
 
 .date-control.visible {
     display: block !important;
+}
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+.modal.active {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: white;
+    padding: 30px;
+    border-radius: 14px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    max-width: 400px;
+    width: 90%;
+    position: relative;
+}
+
+.modal-content h2 {
+    margin-top: 0;
+    color: #1c2a24;
+}
+
+.close {
+    position: absolute;
+    right: 15px;
+    top: 10px;
+    font-size: 28px;
+    font-weight: bold;
+    color: #999;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close:hover {
+    color: #1c2a24;
+}
+
+#edit-name-form,
+#edit-height-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+#edit-name-form label,
+#edit-height-form label {
+    font-weight: 500;
+    color: #1c2a24;
+}
+
+#edit-name-form input,
+#edit-height-form input {
+    padding: 10px 12px;
+    border: 1px solid #aab7af;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+}
+
+#edit-name-form input:focus,
+#edit-height-form input:focus {
+    outline: none;
+    border-color: #204d3b;
+    box-shadow: 0 0 0 3px rgba(32, 77, 59, 0.1);
+}
+
+#edit-name-form button,
+#edit-height-form button {
+    padding: 10px 16px;
+    background: #204d3b;
+    color: #f7f5ef;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    transition: background 0.2s;
+}
+
+#edit-name-form button:hover,
+#edit-height-form button:hover {
+    background: #1a3a2e;
+}
+
+.height-unit-selector {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 12px;
+}
+
+.height-unit-selector label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.height-unit-selector input[type="radio"] {
+    width: auto;
+}
+
+.height-inputs {
+    display: flex;
+    gap: 12px;
+}
+
+.height-input-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.height-input-group label {
+    display: block;
+    font-weight: 500;
+    color: #1c2a24;
+    font-size: 0.9rem;
+}
+
+.height-input-group input {
+    padding: 10px 12px;
+    border: 1px solid #aab7af;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+}
+
+.height-input-group input:focus {
+    outline: none;
+    border-color: #204d3b;
+    box-shadow: 0 0 0 3px rgba(32, 77, 59, 0.1);
 }

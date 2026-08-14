@@ -5,3 +5,7 @@ test:
 .PHONY: smoke
 smoke:
 	./script/smoke_test.sh
+	
+.PHONY: install
+install:
+	./script/install_apache_conf.sh

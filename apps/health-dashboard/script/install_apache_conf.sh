@@ -4,11 +4,22 @@ set -eu
 
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+PROJECT_ROOT=$(CDPATH= cd -- "$SCRIPT_DIR/../../.." && pwd)
 TEMPLATE="$DIR/apache/health-dashboard.conf"
 TARGET="/etc/apache2/sites-available/health-dashboard.conf"
 TARGET_MODE="644"
 CGI_SCRIPT="$DIR/htdocs/index.cgi"
 CGI_MODE="755"
+
+ENV_FILE="$PROJECT_ROOT/.env"
+if [ -f "$ENV_FILE" ]; then
+	set +u
+	. "$ENV_FILE"
+	set -u
+else
+	echo "Error: .env file not found at $ENV_FILE" >&2
+	exit 1
+fi
 
 if [ ! -f "$TEMPLATE" ]; then
 	echo "Template not found: $TEMPLATE" >&2
@@ -25,10 +36,15 @@ if [ ! -f "$CGI_SCRIPT" ]; then
 	exit 1
 fi
 
+if [ -z "${HEALTH_DASHBOARD_HOST:-}" ]; then
+	echo "HEALTH_DASHBOARD_HOST is not set" >&2
+	exit 1
+fi
+
 TMP_TARGET=$(mktemp)
 trap 'rm -f "$TMP_TARGET"' EXIT HUP INT TERM
 
-sed "s|HEALTH_DASHBOARD_DIR|$DIR|g" "$TEMPLATE" > "$TMP_TARGET"
+sed "s|HEALTH_DASHBOARD_DIR|$DIR|g;s|HEALTH_DASHBOARD_HOST|$HEALTH_DASHBOARD_HOST|g" "$TEMPLATE" > "$TMP_TARGET"
 
 
 CGI_MODE_OK=0

@@ -10,11 +10,15 @@ dashboard-test:
 	$(MAKE) -C apps/health-dashboard test
 
 .PHONY: install
-install: collector-install
+install: collector-install dashboard-install
 
 .PHONY: collector-install
 collector-install:
 	$(MAKE) -C apps/fitbit-collector install
+
+.PHONY: dashboard-install
+dashboard-install:
+	$(MAKE) -C apps/health-dashboard install
 
 .PHONY: etl-normalize
 etl-normalize:

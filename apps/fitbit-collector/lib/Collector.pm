@@ -10,7 +10,7 @@ use Protocol qw(parse_request);
 use Collector::DB qw(connect_db);
 use ResponseBuilder qw(build_response);
 
-our @EXPORT_OK = qw(handle_request capture_request_body build_metric_facts);
+our @EXPORT_OK = qw(handle_request capture_request_body build_metric_facts calculate_body_fat_percent);
 
 sub handle_request {
 	my (%args) = @_;
@@ -19,6 +19,10 @@ sub handle_request {
 
 	my $parsed = parse_request($body, ignore_registered_users => 0);
 	my $facts = build_metric_facts($parsed);
+
+	# Extract user_id from the scale's request
+	die "No readings in request\n" unless @{$parsed->{readings}};
+	my $user_id = $parsed->{readings}[0]{user_id};
 
 	my $dbh = connect_db();
 	$dbh->begin_work;
@@ -33,9 +37,12 @@ sub handle_request {
 		die $@;
 	};
 
-	$dbh->disconnect;
+	my $response_body = build_response(
+		dbh => $dbh,
+		user_id => $user_id,
+	);
 
-	my $response_body = build_response();
+	$dbh->disconnect;
 
 	return {
 		status => 200,
@@ -117,6 +124,18 @@ sub build_metric_facts {
 			timestamp => $timestamp,
 			data_source => 'fitbit-aria',
 		};
+
+		my $body_fat_percent = calculate_body_fat_percent($reading);
+		if (defined $body_fat_percent) {
+			push @facts, {
+				metric => 'body_composition.body_fat_percent',
+				unit => '%',
+				user_id => $reading->{user_id},
+				value => $body_fat_percent,
+				timestamp => $timestamp,
+				data_source => 'fitbit-aria',
+			};
+		}
 	}
 
 	return \@facts;
@@ -160,10 +179,10 @@ sub _refresh_aggregates {
 		my $month_key = join('|', $fact->{user_id}, $fact->{metric}, $month);
 		my $year_key = join('|', $fact->{user_id}, $fact->{metric}, $year);
 
-		push @{$by_day{$day_key}}, $fact->{value};
-		push @{$by_week{$week_key}}, $fact->{value};
-		push @{$by_month{$month_key}}, $fact->{value};
-		push @{$by_year{$year_key}}, $fact->{value};
+		push @{$by_day{$day_key}}, { value => $fact->{value}, unit => $fact->{unit} };
+		push @{$by_week{$week_key}}, { value => $fact->{value}, unit => $fact->{unit} };
+		push @{$by_month{$month_key}}, { value => $fact->{value}, unit => $fact->{unit} };
+		push @{$by_year{$year_key}}, { value => $fact->{value}, unit => $fact->{unit} };
 	}
 
 	for my $key (keys %by_day) {
@@ -190,20 +209,23 @@ sub _refresh_aggregates {
 sub _upsert_aggregate {
 	my ($dbh, $table, $date_col, $date_val, $metric, $user_id, $values) = @_;
 
-	my @sorted = sort { $a <=> $b } @$values;
+	my @numbers = map { $_->{value} } @$values;
+	my $unit = @$values ? $values->[0]{unit} : '';
+
+	my @sorted = sort { $a <=> $b } @numbers;
 	my $min = $sorted[0];
 	my $max = $sorted[-1];
 	my $sum = 0;
-	for my $v (@$values) { $sum += $v; }
-	my $count = scalar @$values;
+	for my $v (@numbers) { $sum += $v; }
+	my $count = scalar @numbers;
 	my $mean = $sum / $count;
 
 	$dbh->do(
 		"INSERT INTO $table ($date_col, metric, unit, user_id, \`min\`, \`max\`, \`mean\`, \`sum\`, \`count\`, refreshed_at)
-		 VALUES (?, ?, '', ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
 		 ON DUPLICATE KEY UPDATE \`min\`=LEAST(\`min\`, VALUES(\`min\`)), \`max\`=GREATEST(\`max\`, VALUES(\`max\`)), \`mean\`=(\`sum\`+VALUES(\`sum\`))/((\`count\`+VALUES(\`count\`))), \`sum\`=\`sum\`+VALUES(\`sum\`), \`count\`=\`count\`+VALUES(\`count\`), refreshed_at=VALUES(refreshed_at)",
 		undef,
-		$date_val, $metric, $user_id, $min, $max, $mean, $sum, $count,
+		$date_val, $metric, $unit, $user_id, $min, $max, $mean, $sum, $count,
 	);
 }
 
@@ -233,6 +255,21 @@ sub _format_timestamp_iso {
 		$gmtime[1],
 		$gmtime[0],
 	);
+}
+
+sub calculate_body_fat_percent {
+	my ($reading) = @_;
+
+	my $fat_1 = $reading->{body_fat_1};
+	my $fat_2 = $reading->{body_fat_2};
+
+	return undef if !defined $fat_1 || !defined $fat_2;
+	return undef if $fat_1 == 0 && $fat_2 == 0;
+
+	my $fat_1_percent = $fat_1 / 100;
+	my $fat_2_percent = $fat_2 / 100;
+
+	return ($fat_1_percent + $fat_2_percent) / 2;
 }
 
 1;

@@ -6,15 +6,21 @@ use warnings;
 use Exporter 'import';
 use POSIX qw(time);
 use CRC qw(crc16_xmodem);
+use AriaProtocol qw(UNIT_POUNDS STATUS_CONFIGURED GENDER_UNKNOWN gender_to_enum age_from_birthdate encode_name_field);
 
 our @EXPORT_OK = qw(build_response);
+
+# based on https://github.com/cequencer/helvetic/blob/a64b6faed38ad2b174144906724508b5aed6cb07/protocol.md
 
 sub build_response {
 	my (%opts) = @_;
 
+	my $dbh = $opts{dbh} or die "dbh is required\n";
+	my $user_id = $opts{user_id} or die "user_id is required\n";
+
 	my $current_timestamp = time();
-	my $units = 0;
-	my $status = 0x32;
+	my $units = UNIT_POUNDS;
+	my $status = STATUS_CONFIGURED;
 	my $user_count = 1;
 
 	my $body = '';
@@ -24,7 +30,7 @@ sub build_response {
 	$body .= chr(0x01);
 	$body .= _write_u32le($user_count);
 
-	my $user = _build_user();
+	my $user = _build_user($dbh, $user_id);
 	$body .= $user;
 
 	$body .= _write_u32le(0x03);
@@ -37,27 +43,36 @@ sub build_response {
 }
 
 sub _build_user {
-	my $user_id = 45016898;
-	my $name = "User";
-	my $age = 30;
-	my $gender = 0x34;
-	my $height_mm = 1800;
+	my ($dbh, $user_id) = @_;
+
+	my $user_row = $dbh->selectrow_hashref(
+		'SELECT id, name, birthdate, gender, height_mm FROM `user` WHERE id = ?',
+		undef,
+		$user_id
+	) or die "User $user_id not found\n";
+
+	my $name = $user_row->{name};
+	my $age = age_from_birthdate($user_row->{birthdate});
+	my $gender = gender_to_enum($user_row->{gender});
+	my $height_mm = $user_row->{height_mm} // 0;
 
 	my $user = '';
 	$user .= _write_u32le($user_id);
-	$user .= pack('C16', 0) x 1;
-	$user .= pack('A20', $name);
-	$user .= _write_u32le(0);
-	$user .= _write_u32le(100000000);
+	$user .= pack('C16', 0) x 1;                  # padding
+	$user .= encode_name_field($name);            # name: ASCII, fixed 20-byte field
+	$user .= _write_u32le(0);                     # min_weight_tolerance
+	$user .= _write_u32le(100000000);             # max_weight_tolerance
 	$user .= _write_u32le($age);
 	$user .= chr($gender);
 	$user .= _write_u32le($height_mm);
-	$user .= _write_u32le(0);
-	$user .= _write_u32le(0);
-	$user .= _write_u32le(0);
-	$user .= _write_u32le(0);
-	$user .= _write_u32le(0);
-	$user .= _write_u32le(0);
+	$user .= _write_u32le(0);                     # weight1 (previous known value)
+	$user .= _write_u32le(0);                     # body_fat (previous known value)
+	$user .= _write_u32le(0);                     # covariance (previous known value)
+	$user .= _write_u32le(0);                     # weight2 (previous known value)
+	$user .= _write_u32le(0);                     # timestamp
+	$user .= _write_u32le(0);                     # unknown1
+	$user .= _write_u32le(3);                     # unknown2 (per protocol spec)
+	$user .= _write_u32le(0);                     # unknown3
 
 	return $user;
 }

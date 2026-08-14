@@ -35,7 +35,7 @@ eval { parse_request(substr($payload, 0, 20)); 1 };
 like($@, qr/Payload too short/, 'short payloads are rejected');
 
 my $facts = build_metric_facts($expected);
-is(scalar(@$facts), 10, 'collector generates 5 metrics per 2 readings');
+is(scalar(@$facts), 12, 'collector generates 6 metrics per 2 readings');
 
 my @weight_facts = grep { $_->{metric} eq 'weight' } @$facts;
 is(scalar(@weight_facts), 2, 'weight facts for both readings');
@@ -59,6 +59,12 @@ is($body_fat_2[0]->{value}, 91011, 'body_fat_2 value preserved');
 
 my @covariance = grep { $_->{metric} eq 'body_composition.covariance' } @$facts;
 is($covariance[0]->{value}, 5678, 'covariance value preserved');
+
+my @body_fat_percent = grep { $_->{metric} eq 'body_composition.body_fat_percent' } @$facts;
+is(scalar(@body_fat_percent), 2, 'body_fat_percent calculated for both readings');
+is($body_fat_percent[0]->{value}, 461.225, 'body_fat_percent is average of body_fat_1 and body_fat_2');
+is($body_fat_percent[0]->{unit}, '%', 'body_fat_percent unit is percent');
+is($body_fat_percent[1]->{value}, 22.22, 'body_fat_percent calculated for second reading');
 
 done_testing();
 
