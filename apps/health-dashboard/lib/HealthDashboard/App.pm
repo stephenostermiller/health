@@ -18,7 +18,7 @@ sub render_dashboard_page {
 
 	my $user_id = get_user_id_from_cookie(cookie => $cookie);
 
-	if (!$user_id) {
+	if (!defined $user_id || $user_id eq '') {
 		return _render_login_page();
 	}
 

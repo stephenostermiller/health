@@ -88,47 +88,11 @@ sub build_metric_facts {
 			timestamp => $timestamp,
 			data_source => 'fitbit-aria',
 		};
-
-		push @facts, {
-			metric => 'body_composition.impedance',
-			unit => 'ohms',
-			user_id => $reading->{user_id},
-			value => $reading->{impedance},
-			timestamp => $timestamp,
-			data_source => 'fitbit-aria',
-		};
-
-		push @facts, {
-			metric => 'body_composition.body_fat_1',
-			unit => 'raw',
-			user_id => $reading->{user_id},
-			value => $reading->{body_fat_1},
-			timestamp => $timestamp,
-			data_source => 'fitbit-aria',
-		};
-
-		push @facts, {
-			metric => 'body_composition.body_fat_2',
-			unit => 'raw',
-			user_id => $reading->{user_id},
-			value => $reading->{body_fat_2},
-			timestamp => $timestamp,
-			data_source => 'fitbit-aria',
-		};
-
-		push @facts, {
-			metric => 'body_composition.covariance',
-			unit => 'raw',
-			user_id => $reading->{user_id},
-			value => $reading->{covariance},
-			timestamp => $timestamp,
-			data_source => 'fitbit-aria',
-		};
-
+		
 		my $body_fat_percent = calculate_body_fat_percent($reading);
 		if (defined $body_fat_percent) {
 			push @facts, {
-				metric => 'body_composition.body_fat_percent',
+				metric => 'body_fat',
 				unit => '%',
 				user_id => $reading->{user_id},
 				value => $body_fat_percent,
@@ -266,8 +230,8 @@ sub calculate_body_fat_percent {
 	return undef if !defined $fat_1 || !defined $fat_2;
 	return undef if $fat_1 == 0 && $fat_2 == 0;
 
-	my $fat_1_percent = $fat_1 / 100;
-	my $fat_2_percent = $fat_2 / 100;
+	my $fat_1_percent = $fat_1 / 1000;
+	my $fat_2_percent = $fat_2 / 1000;
 
 	return ($fat_1_percent + $fat_2_percent) / 2;
 }

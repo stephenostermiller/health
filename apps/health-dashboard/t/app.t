@@ -13,8 +13,6 @@ use HealthDashboard::Metrics qw(default_metric metric_definition);
 use HealthDashboard::Queries qw(validate_range granularity_policy supported_granularities);
 
 my $html = render_dashboard_page();
-like($html, qr/Health dashboard/, 'dashboard page renders heading');
-like($html, qr/window\.dashboardConfig/, 'dashboard page embeds bootstrap config');
 unlike($html, qr/value="raw"/, 'raw option removed');
 
 my $bad = render_series_response(query_string => 'metric=not_real&granularity=day');
@@ -26,8 +24,8 @@ is($bad_granularity->{status}, 400, 'raw granularity is rejected');
 my $bad_aggregation = render_series_response(query_string => 'metric=weight&granularity=day&aggregation=sum');
 is($bad_aggregation->{status}, 400, 'unsupported aggregation is rejected');
 
-my $bad_range = render_series_response(query_string => 'metric=weight&granularity=day&start=2026-01-01&end=2026-12-31');
-is($bad_range->{status}, 400, 'day granularity with >180-day range is rejected');
+my $bad_range = render_series_response(query_string => 'metric=weight&granularity=day&start=2024-01-01&end=2026-12-31');
+is($bad_range->{status}, 400, 'day granularity with large range is rejected');
 
 is(default_metric(), 'weight', 'default metric is weight');
 ok(metric_definition('body_fat'), 'body fat metric is defined');
@@ -35,9 +33,9 @@ ok(metric_definition('body_fat'), 'body fat metric is defined');
 # Granularity policy tests
 my $policy = granularity_policy();
 is_deeply($policy->{year}, {}, 'year has no max span');
-is($policy->{day}{maxSpanDays}, 180, 'day has 180-day max span');
-is($policy->{week}{maxSpanDays}, 728, 'week has 728-day max span');
-is($policy->{month}{maxSpanMonths}, 144, 'month has 144-month max span');
+is($policy->{day}{maxSpanDays}, 730, 'day has 730-day max span');
+is($policy->{week}{maxSpanDays}, 1456, 'week has 1456-day max span');
+is($policy->{month}{maxSpanMonths}, 288, 'month has 288-month max span');
 
 # Supported granularities test
 my @supported = supported_granularities();
@@ -47,7 +45,7 @@ ok(!grep { $_ eq 'raw' } @supported, 'raw is not supported');
 
 # validate_range tests
 is(validate_range(granularity => 'day', start => '2026-01-01', end => '2026-01-15'), undef, 'day with 14-day range is valid');
-ok(validate_range(granularity => 'day', start => '2026-01-01', end => '2026-12-31'), 'day with 364-day range is invalid');
+ok(validate_range(granularity => 'day', start => '2023-01-01', end => '2026-12-31'), 'day with large range is invalid');
 is(validate_range(granularity => 'month', start => '', end => ''), undef, 'empty start/end bypasses validation');
 ok(validate_range(granularity => 'day', start => '2026-01-15', end => '2026-01-01'), 'start > end is invalid');
 

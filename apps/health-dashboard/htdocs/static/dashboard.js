@@ -291,6 +291,22 @@ const config = window.dashboardConfig || {};
     let minTime = Math.min(...timestamps);
     let maxTime = Math.max(...timestamps);
 
+    // When there's only one data point, add padding so the axis renders properly
+    if (minTime === maxTime) {
+      let padding;
+      if (granularity === 'year') {
+        padding = 1000 * 60 * 60 * 24 * 365.25; // 1 year
+      } else if (granularity === 'month') {
+        padding = 1000 * 60 * 60 * 24 * 30.44; // 1 month
+      } else if (granularity === 'week') {
+        padding = 1000 * 60 * 60 * 24 * 7; // 1 week
+      } else {
+        padding = 1000 * 60 * 60 * 24; // 1 day
+      }
+      minTime -= padding;
+      maxTime += padding;
+    }
+
     const transformedDatasets = payload.datasets.map(dataset => ({
       ...dataset,
       data: payload.labels.map((label, i) => ({

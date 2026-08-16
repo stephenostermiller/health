@@ -35,7 +35,7 @@ eval { parse_request(substr($payload, 0, 20)); 1 };
 like($@, qr/Payload too short/, 'short payloads are rejected');
 
 my $facts = build_metric_facts($expected);
-is(scalar(@$facts), 12, 'collector generates 6 metrics per 2 readings');
+is(scalar(@$facts), 4, 'collector generates 4 metrics per 2 readings');
 
 my @weight_facts = grep { $_->{metric} eq 'weight' } @$facts;
 is(scalar(@weight_facts), 2, 'weight facts for both readings');
@@ -47,24 +47,11 @@ is($weight_facts[1]->{user_id}, 42, 'registered reading user_id');
 
 like($weight_facts[0]->{timestamp}, qr/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}/, 'timestamp is ISO format');
 
-my @impedance_facts = grep { $_->{metric} eq 'body_composition.impedance' } @$facts;
-is($impedance_facts[0]->{value}, 501, 'impedance value preserved');
-is($impedance_facts[1]->{value}, 650, 'second impedance value');
-
-my @body_fat_1 = grep { $_->{metric} eq 'body_composition.body_fat_1' } @$facts;
-is($body_fat_1[0]->{value}, 1234, 'body_fat_1 value preserved');
-
-my @body_fat_2 = grep { $_->{metric} eq 'body_composition.body_fat_2' } @$facts;
-is($body_fat_2[0]->{value}, 91011, 'body_fat_2 value preserved');
-
-my @covariance = grep { $_->{metric} eq 'body_composition.covariance' } @$facts;
-is($covariance[0]->{value}, 5678, 'covariance value preserved');
-
-my @body_fat_percent = grep { $_->{metric} eq 'body_composition.body_fat_percent' } @$facts;
+my @body_fat_percent = grep { $_->{metric} eq 'body_fat' } @$facts;
 is(scalar(@body_fat_percent), 2, 'body_fat_percent calculated for both readings');
-is($body_fat_percent[0]->{value}, 461.225, 'body_fat_percent is average of body_fat_1 and body_fat_2');
+is($body_fat_percent[0]->{value}, 46.1225, 'body_fat_percent is average of body_fat_1 and body_fat_2');
 is($body_fat_percent[0]->{unit}, '%', 'body_fat_percent unit is percent');
-is($body_fat_percent[1]->{value}, 22.22, 'body_fat_percent calculated for second reading');
+is($body_fat_percent[1]->{value}, 2.222, 'body_fat_percent calculated for second reading');
 
 done_testing();
 

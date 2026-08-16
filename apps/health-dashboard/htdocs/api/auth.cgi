@@ -7,9 +7,10 @@ use FindBin;
 use lib "$FindBin::Bin/../../lib";
 
 use JSON::PP;
-use HealthDashboard::Auth qw(authenticate_user create_auth_cookie set_user_password get_user_by_id_or_name user_exists update_user_field get_user_id_from_cookie);
+use HealthDashboard::Auth qw(authenticate_user create_auth_cookie set_user_password get_user_by_id_or_name user_exists update_user_field get_user_id_from_cookie create_user user_has_data);
 
 binmode(STDOUT);
+binmode(STDIN);
 
 my $request_body = do { local $/; <STDIN> };
 my $data = eval { JSON::PP->new->decode($request_body) } // {};
@@ -31,19 +32,41 @@ eval {
 		my $login = $data->{login};
 		my $password = $data->{password};
 
-		if (!$login || !$password) {
+		if (!defined $login || $login eq '' || !defined $password || $password eq '') {
 			$response = { error => 'Login and password are required' };
-		} elsif (!user_exists(login => $login)) {
-			$response = { error => 'User not found' };
 		} else {
-			my $user_id = authenticate_user(login => $login, password => $password);
-			if ($user_id) {
-				my $cookie = create_auth_cookie(user_id => $user_id);
-				$response = { success => 1, cookie => $cookie };
-			} else {
-				my $user = get_user_by_id_or_name(login => $login);
-				if ($user && !$user->{password_hash}) {
+			my $user = get_user_by_id_or_name(login => $login);
+
+			if (!$user) {
+				# User doesn't exist - create if they have data
+				if (user_has_data(user_id => $login)) {
+					if (create_user(user_id => $login)) {
+						if (set_user_password(user_id => $login, password => $password)) {
+							my $cookie = create_auth_cookie(user_id => $login);
+							$response = { success => 1, cookie => $cookie };
+						} else {
+							$response = { needsPassword => 1, user_id => $login };
+						}
+					} else {
+						$response = { error => 'Failed to create user' };
+					}
+				} else {
+					$response = { error => 'User not found' };
+				}
+			} elsif (!$user->{password_hash}) {
+				# User exists but has no password
+				if (set_user_password(user_id => $user->{id}, password => $password)) {
+					my $cookie = create_auth_cookie(user_id => $user->{id});
+					$response = { success => 1, cookie => $cookie };
+				} else {
 					$response = { needsPassword => 1, user_id => $user->{id} };
+				}
+			} else {
+				# User exists and has a password - authenticate
+				my $user_id = authenticate_user(login => $login, password => $password);
+				if (defined $user_id && length($user_id)) {
+					my $cookie = create_auth_cookie(user_id => $user_id);
+					$response = { success => 1, cookie => $cookie };
 				} else {
 					$response = { error => 'Invalid password' };
 				}
@@ -53,7 +76,7 @@ eval {
 		my $login = $data->{login};
 		my $password = $data->{password};
 
-		if (!$login || !$password) {
+		if (!defined $login || $login eq '' || !defined $password || $password eq '') {
 			$response = { error => 'Login and password are required' };
 		} elsif (!user_exists(login => $login)) {
 			$response = { error => 'User not found' };

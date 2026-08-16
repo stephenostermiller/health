@@ -18,6 +18,8 @@ our @EXPORT_OK = qw(
 	set_user_password
 	get_user_by_id_or_name
 	update_user_field
+	create_user
+	user_has_data
 	get_secret_key
 );
 
@@ -32,7 +34,7 @@ sub authenticate_user {
 
 	my $dbh = connect_db();
 	my $user = $dbh->selectrow_hashref(
-		'SELECT id, password_hash FROM `user` WHERE id = ? OR name = ? LIMIT 1',
+		'SELECT id, password_hash FROM `user` WHERE CAST(id AS CHAR) = ? OR name = ? LIMIT 1',
 		undef,
 		$login,
 		$login
@@ -83,7 +85,7 @@ sub user_exists {
 
 	my $dbh = connect_db();
 	my $count = $dbh->selectrow_array(
-		'SELECT COUNT(*) FROM `user` WHERE id = ? OR name = ? LIMIT 1',
+		'SELECT COUNT(*) FROM `user` WHERE CAST(id AS CHAR) = ? OR name = ? LIMIT 1',
 		undef,
 		$login,
 		$login
@@ -125,7 +127,7 @@ sub get_user_by_id_or_name {
 
 	my $dbh = connect_db();
 	my $user = $dbh->selectrow_hashref(
-		'SELECT id, name, height_mm FROM `user` WHERE id = ? OR name = ? LIMIT 1',
+		'SELECT id, name, height_mm, password_hash FROM `user` WHERE CAST(id AS CHAR) = ? OR name = ? LIMIT 1',
 		undef,
 		$login,
 		$login
@@ -167,6 +169,43 @@ sub update_user_field {
 	$dbh->disconnect;
 
 	return $result > 0;
+}
+
+# Create a new user with the given id
+sub create_user {
+	my (%args) = @_;
+	my $user_id = $args{user_id};
+
+	return 0 unless defined $user_id;
+
+	my $dbh = connect_db();
+	my $result = $dbh->do(
+		'INSERT INTO `user` (id, name) VALUES (?, ?)',
+		undef,
+		$user_id,
+		$user_id,
+	);
+	$dbh->disconnect;
+
+	return $result > 0;
+}
+
+# Check if a user has any data in the metric_fact table
+sub user_has_data {
+	my (%args) = @_;
+	my $user_id = $args{user_id};
+
+	return 0 unless defined $user_id;
+
+	my $dbh = connect_db();
+	my $count = $dbh->selectrow_array(
+		'SELECT COUNT(*) FROM metric_fact WHERE user_id = ? LIMIT 1',
+		undef,
+		$user_id
+	);
+	$dbh->disconnect;
+
+	return $count > 0;
 }
 
 # Get or generate the secret key for signing cookies

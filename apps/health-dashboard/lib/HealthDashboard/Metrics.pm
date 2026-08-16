@@ -22,55 +22,6 @@ my @METRICS = (
 		color => '#c06c84',
 		default_granularity => 'day',
 	},
-	{
-		metric => 'body_composition.impedance',
-		label => 'Impedance',
-		unit => 'ohms',
-		color => '#f59e0b',
-		default_granularity => 'day',
-	},
-	{
-		metric => 'body_composition.body_fat_1',
-		label => 'Body fat 1',
-		unit => 'raw',
-		color => '#ec4899',
-		default_granularity => 'day',
-	},
-	{
-		metric => 'body_composition.body_fat_2',
-		label => 'Body fat 2',
-		unit => 'raw',
-		color => '#8b5cf6',
-		default_granularity => 'day',
-	},
-	{
-		metric => 'body_composition.covariance',
-		label => 'Covariance',
-		unit => 'raw',
-		color => '#06b6d4',
-		default_granularity => 'day',
-	},
-	{
-		metric => 'daily_resting_heart_rate',
-		label => 'Resting heart rate',
-		unit => 'beats_per_minute',
-		color => '#6c5b7b',
-		default_granularity => 'day',
-	},
-	{
-		metric => 'daily_oxygen_saturation.average',
-		label => 'Daily oxygen saturation',
-		unit => 'percent',
-		color => '#2a9d8f',
-		default_granularity => 'day',
-	},
-	{
-		metric => 'daily_vo2_max.cardio_fitness',
-		label => 'Daily VO2 max',
-		unit => 'score',
-		color => '#d97706',
-		default_granularity => 'month',
-	},
 );
 
 sub default_metric {

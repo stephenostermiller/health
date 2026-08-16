@@ -14,7 +14,7 @@ binmode(STDOUT);
 my $cookie = _extract_auth_cookie();
 my $user_id = get_user_id_from_cookie(cookie => $cookie);
 
-unless ($user_id) {
+unless (defined $user_id && length($user_id)) {
 	print "Status: 401 Unauthorized\r\n";
 	print "Content-Type: application/json\r\n";
 	print "Content-Length: 30\r\n\r\n";
