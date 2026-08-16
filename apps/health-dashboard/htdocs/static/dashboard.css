@@ -154,6 +154,10 @@ body {
     cursor: pointer;
 }
 
+.chart-panel,#health-chart {
+    max-height:100vh;
+}
+
 .chart-panel,
 .summary-panel {
     background: rgba(255, 255, 255, 0.78);
@@ -339,4 +343,13 @@ body {
     outline: none;
     border-color: #204d3b;
     box-shadow: 0 0 0 3px rgba(32, 77, 59, 0.1);
+}
+
+@media (max-width: 699px), (max-height: 699px) {
+    .page {
+        padding: 32px 0 48px;
+    }
+    .chart-panel{
+        padding: 0;
+    }
 }
