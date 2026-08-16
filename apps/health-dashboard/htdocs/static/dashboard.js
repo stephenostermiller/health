@@ -408,6 +408,7 @@ const config = window.dashboardConfig || {};
   }
 
   function handleMetricChange(event) {
+    updateUrlHash();
     loadSeries().catch((error) => {
       byId('chart-status').textContent = error.message;
     });
@@ -429,12 +430,14 @@ const config = window.dashboardConfig || {};
       byId('end').value = dateRange.end;
     }
 
+    updateUrlHash();
     loadSeries().catch((error) => {
       byId('chart-status').textContent = error.message;
     });
   }
 
   function handleAggregationChange(event) {
+    updateUrlHash();
     loadSeries().catch((error) => {
       byId('chart-status').textContent = error.message;
     });
@@ -455,6 +458,7 @@ const config = window.dashboardConfig || {};
       }
       setDateInputVisibility(false);
       byId('range-error').textContent = '';
+      updateUrlHash();
       loadSeries().catch((error) => {
         byId('chart-status').textContent = error.message;
       });
@@ -468,10 +472,94 @@ const config = window.dashboardConfig || {};
     const error = validateSpan(granularity, start, end);
     byId('range-error').textContent = error || '';
     if (!error && start && end) {
+      updateUrlHash();
       loadSeries().catch((error) => {
         byId('chart-status').textContent = error.message;
       });
     }
+  }
+
+  function updateUrlHash() {
+    const metric = byId('metric').value;
+    const granularity = byId('granularity').value;
+    const aggregation = byId('aggregation').value;
+    const timePeriod = byId('time-period').value;
+    const start = byId('start').value;
+    const end = byId('end').value;
+
+    const params = new URLSearchParams();
+    params.set('metric', metric);
+    params.set('granularity', granularity);
+    params.set('aggregation', aggregation);
+
+    const periodElement = byId('time-period').selectedOptions[0];
+    const isCustom = periodElement && periodElement.dataset.custom === 'true';
+
+    if (isCustom) {
+      if (start) params.set('start', start);
+      if (end) params.set('end', end);
+    } else {
+      params.set('period', timePeriod);
+    }
+
+    window.location.hash = params.toString();
+  }
+
+  function restoreStateFromHash() {
+    const hash = window.location.hash.slice(1);
+    if (!hash) return false;
+
+    const params = new URLSearchParams(hash);
+    const metric = params.get('metric');
+    const granularity = params.get('granularity');
+    const aggregation = params.get('aggregation');
+    const period = params.get('period');
+    const start = params.get('start');
+    const end = params.get('end');
+
+    let stateChanged = false;
+
+    if (metric && byId('metric').value !== metric) {
+      byId('metric').value = metric;
+      stateChanged = true;
+    }
+
+    if (granularity && byId('granularity').value !== granularity) {
+      byId('granularity').value = granularity;
+      populateTimePeriods(granularity);
+      stateChanged = true;
+    }
+
+    if (aggregation && byId('aggregation').value !== aggregation) {
+      byId('aggregation').value = aggregation;
+      stateChanged = true;
+    }
+
+    if (period) {
+      const periodOption = Array.from(byId('time-period').options).find(opt => opt.value === period);
+      if (periodOption) {
+        byId('time-period').value = period;
+        setDateInputVisibility(false);
+        const dateRange = calculateDateRange(granularity, period);
+        if (dateRange) {
+          byId('start').value = dateRange.start;
+          byId('end').value = dateRange.end;
+        }
+        stateChanged = true;
+      }
+    } else if (start && end) {
+      byId('time-period').value = 'Custom';
+      const periodOption = Array.from(byId('time-period').options).find(opt => opt.dataset.custom === 'true');
+      if (periodOption) {
+        byId('time-period').value = periodOption.value;
+      }
+      byId('start').value = start;
+      byId('end').value = end;
+      setDateInputVisibility(true);
+      stateChanged = true;
+    }
+
+    return stateChanged;
   }
 
 
@@ -490,12 +578,16 @@ const config = window.dashboardConfig || {};
     setupMenu();
     setupModals();
 
-    // Calculate date range for initial default time period before loading
-    const periodLabel = byId('time-period').value;
-    const dateRange = calculateDateRange(granularity, periodLabel);
-    if (dateRange) {
-      byId('start').value = dateRange.start;
-      byId('end').value = dateRange.end;
+    const hasHashState = restoreStateFromHash();
+
+    if (!hasHashState) {
+      // Calculate date range for initial default time period before loading
+      const periodLabel = byId('time-period').value;
+      const dateRange = calculateDateRange(granularity, periodLabel);
+      if (dateRange) {
+        byId('start').value = dateRange.start;
+        byId('end').value = dateRange.end;
+      }
     }
 
     loadSeries().catch((error) => {
