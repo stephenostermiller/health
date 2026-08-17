@@ -648,6 +648,11 @@ function openEditUserModal() {
   const gender = config.userGender || 'unknown';
   genderSelect.value = gender.toLowerCase();
 
+  // Populate unit preference
+  const unitPreferenceSelect = document.getElementById('unit-preference');
+  const unitPreference = config.userUnitPreference || 'imperial';
+  unitPreferenceSelect.value = unitPreference;
+
   // Populate height fields from stored value (in mm)
   const heightMm = parseInt(config.userHeight) || 0;
 
@@ -659,6 +664,17 @@ function openEditUserModal() {
   feetInput.value = '';
   inchesInput.value = '';
   metersInput.value = '';
+
+  // Show/hide height inputs based on unit preference
+  const imperialInputs = document.getElementById('imperial-inputs');
+  const metricInputs = document.getElementById('metric-inputs');
+  if (unitPreference === 'metric') {
+    imperialInputs.style.display = 'none';
+    metricInputs.style.display = 'flex';
+  } else {
+    imperialInputs.style.display = 'flex';
+    metricInputs.style.display = 'none';
+  }
 
   if (heightMm > 0) {
     // Convert to imperial
@@ -689,20 +705,18 @@ function setupModals() {
 
   document.getElementById('edit-user-form').addEventListener('submit', updateUserProfile);
 
-  // Height unit switching
-  const unitRadios = document.querySelectorAll('input[name="height-unit"]');
-  unitRadios.forEach(radio => {
-    radio.addEventListener('change', (event) => {
-      const imperialInputs = document.getElementById('imperial-inputs');
-      const metricInputs = document.getElementById('metric-inputs');
-      if (event.target.value === 'imperial') {
-        imperialInputs.style.display = 'flex';
-        metricInputs.style.display = 'none';
-      } else {
-        imperialInputs.style.display = 'none';
-        metricInputs.style.display = 'flex';
-      }
-    });
+  // Unit preference switching
+  const unitPreferenceSelect = document.getElementById('unit-preference');
+  unitPreferenceSelect.addEventListener('change', (event) => {
+    const imperialInputs = document.getElementById('imperial-inputs');
+    const metricInputs = document.getElementById('metric-inputs');
+    if (event.target.value === 'metric') {
+      imperialInputs.style.display = 'none';
+      metricInputs.style.display = 'flex';
+    } else {
+      imperialInputs.style.display = 'flex';
+      metricInputs.style.display = 'none';
+    }
   });
 }
 
@@ -711,7 +725,7 @@ async function updateUserProfile(event) {
 
   const newName = document.getElementById('user-name').value.trim();
   const genderValue = document.getElementById('user-gender').value;
-  const unit = document.querySelector('input[name="height-unit"]:checked').value;
+  const unitPreference = document.getElementById('unit-preference').value;
 
   if (!newName) {
     alert('Please enter a name');
@@ -723,7 +737,7 @@ async function updateUserProfile(event) {
 
   let heightMm = null;
 
-  if (unit === 'imperial') {
+  if (unitPreference === 'imperial') {
     const feet = parseFloat(document.getElementById('height-feet').value) || 0;
     const inches = parseFloat(document.getElementById('height-inches').value) || 0;
 
@@ -741,6 +755,7 @@ async function updateUserProfile(event) {
     const updates = [
       { field: 'name', value: newName },
       { field: 'gender', value: genderDbValue },
+      { field: 'unit_preference', value: unitPreference },
     ];
 
     if (heightMm !== null) {
@@ -763,6 +778,7 @@ async function updateUserProfile(event) {
 
     config.userName = newName;
     config.userGender = genderValue;
+    config.userUnitPreference = unitPreference;
     if (heightMm !== null) {
       config.userHeight = heightMm;
     }

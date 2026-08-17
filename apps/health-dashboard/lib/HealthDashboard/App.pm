@@ -32,6 +32,7 @@ sub _render_authenticated_dashboard {
 	my $user_name = $user ? $user->{name} : 'User';
 	my $user_height = $user ? ($user->{height_mm} || '') : '';
 	my $user_gender = _normalize_gender($user ? ($user->{gender} || 'unknown') : 'unknown');
+	my $user_unit_preference = $user ? ($user->{unit_preference} || 'imperial') : 'imperial';
 
 	my $config = JSON::PP->new->ascii->canonical->encode({
 		defaultMetric => default_metric(),
@@ -41,6 +42,7 @@ sub _render_authenticated_dashboard {
 		userName => $user_name,
 		userHeight => $user_height,
 		userGender => $user_gender,
+		userUnitPreference => $user_unit_preference,
 	});
 
 	return <<"HTML";
@@ -50,13 +52,14 @@ sub _render_authenticated_dashboard {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Health Dashboard</title>
+  <link rel="icon" type="image/svg+xml" href="static/health.svg">
   <link rel="stylesheet" href="static/dashboard.css">
 </head>
 <body>
   <div class="page">
     <section class="hero">
       <div>
-        <h1>Health dashboard</h1>
+        <h1><img src="static/health.svg" alt="Health" style="height:1.2em;vertical-align:middle;margin-right:0.3em">Health dashboard</h1>
         <p>Welcome, $user_name</p>
       </div>
       <div class="menu-container">
@@ -92,31 +95,30 @@ sub _render_authenticated_dashboard {
           </div>
 
           <div class="form-group">
-            <label>Height:</label>
-            <div class="height-unit-selector">
-              <label>
-                <input type="radio" name="height-unit" value="imperial" checked> Feet/Inches
-              </label>
-              <label>
-                <input type="radio" name="height-unit" value="metric"> Meters
-              </label>
-            </div>
+            <label for="unit-preference">Unit Preference:</label>
+            <select id="unit-preference" name="unit-preference">
+              <option value="imperial">Imperial (feet, inches)</option>
+              <option value="metric">Metric (meters)</option>
+            </select>
           </div>
 
-          <div id="imperial-inputs" class="height-inputs">
-            <div class="height-input-group">
-              <label for="height-feet">Feet:</label>
-              <input type="number" id="height-feet" name="height-feet" min="0" max="9">
+          <div class="form-group">
+            <label>Height:</label>
+            <div id="imperial-inputs" class="height-inputs">
+              <div class="height-input-group">
+                <label for="height-feet">Feet:</label>
+                <input type="number" id="height-feet" name="height-feet" min="0" max="9">
+              </div>
+              <div class="height-input-group">
+                <label for="height-inches">Inches:</label>
+                <input type="number" id="height-inches" name="height-inches" min="0" max="11" step="0.5">
+              </div>
             </div>
-            <div class="height-input-group">
-              <label for="height-inches">Inches:</label>
-              <input type="number" id="height-inches" name="height-inches" min="0" max="11" step="0.5">
-            </div>
-          </div>
-          <div id="metric-inputs" class="height-inputs" style="display: none;">
-            <div class="height-input-group">
-              <label for="height-meters">Height (m):</label>
-              <input type="number" id="height-meters" name="height-meters" min="0" step="0.01">
+            <div id="metric-inputs" class="height-inputs" style="display: none;">
+              <div class="height-input-group">
+                <label for="height-meters">Height (m):</label>
+                <input type="number" id="height-meters" name="height-meters" min="0" step="0.01">
+              </div>
             </div>
           </div>
 
@@ -245,6 +247,7 @@ sub _render_login_page {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Health Dashboard Login</title>
+  <link rel="icon" type="image/svg+xml" href="static/health.svg">
   <style>
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -325,7 +328,7 @@ sub _render_login_page {
 </head>
 <body>
   <div class="login-box">
-    <h1>Health Dashboard</h1>
+    <h1><img src="static/health.svg" alt="Health" style="height:1.2em;vertical-align:middle;margin-right:0.3em">Health Dashboard</h1>
     <div class="error" id="error"></div>
     <div class="message" id="message"></div>
 
