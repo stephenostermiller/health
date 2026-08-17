@@ -249,6 +249,11 @@ const config = window.dashboardConfig || {};
     return Date.UTC(newYear, newMonth - 1, newDay);
   }
 
+  function weekToTimestamp(dateStr) {
+    const [year, month, day] = dateStr.split('-').map(Number);
+    return Date.UTC(year, month - 1, day);
+  }
+
   function yearToTimestamp(year) {
     // Parse year as a number to avoid type issues
     const yearNum = parseInt(year);
@@ -273,6 +278,26 @@ const config = window.dashboardConfig || {};
     } else if (granularity === 'day') {
       converter = dayToTimestamp;
       labelFormatter = (value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    } else if (granularity === 'week') {
+      converter = weekToTimestamp;
+      const years = payload.labels.map(label => {
+        const [year] = label.split('-').map(Number);
+        return year;
+      });
+      const spansMultipleYears = Math.min(...years) !== Math.max(...years);
+      if (spansMultipleYears) {
+        labelFormatter = (value) => {
+          const date = new Date(value);
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          return `${monthNames[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()}`;
+        };
+      } else {
+        labelFormatter = (value) => {
+          const date = new Date(value);
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          return `${monthNames[date.getUTCMonth()]} ${date.getUTCDate()}`;
+        };
+      }
     } else {
       converter = dateToTimestamp;
 

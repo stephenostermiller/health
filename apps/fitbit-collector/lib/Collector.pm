@@ -198,7 +198,7 @@ sub _get_week_start {
 	my @parts = split /-|:| /, $timestamp;
 	my ($year, $month, $day) = @parts[0..2];
 	use Time::Local;
-	my $epoch = timelocal(0, 0, 0, $day, $month - 1, $year - 1900);
+	my $epoch = timegm(0, 0, 0, $day, $month - 1, $year - 1900);
 	my @gmtime = gmtime($epoch);
 	my $weekday = $gmtime[6];
 	my $days_back = $weekday;

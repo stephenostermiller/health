@@ -62,23 +62,23 @@ BEGIN
     INSERT INTO metric_aggregate_week (week_start_date, metric, unit, user_id, `min`, `max`, `mean`, `sum`, `count`, refreshed_at)
     WITH ordered AS (
         SELECT
-            DATE_SUB(DATE(`timestamp`), INTERVAL WEEKDAY(DATE(`timestamp`)) DAY) AS week_start_date,
+            DATE_SUB(DATE(`timestamp`), INTERVAL (WEEKDAY(DATE(`timestamp`)) + 1) % 7 DAY) AS week_start_date,
             metric,
             unit,
             user_id,
             value,
             ROW_NUMBER() OVER (
-                PARTITION BY DATE_SUB(DATE(`timestamp`), INTERVAL WEEKDAY(DATE(`timestamp`)) DAY), metric, user_id
+                PARTITION BY DATE_SUB(DATE(`timestamp`), INTERVAL (WEEKDAY(DATE(`timestamp`)) + 1) % 7 DAY), metric, user_id
                 ORDER BY value
             ) AS row_number_in_bucket,
             COUNT(*) OVER (
-                PARTITION BY DATE_SUB(DATE(`timestamp`), INTERVAL WEEKDAY(DATE(`timestamp`)) DAY), metric, user_id
+                PARTITION BY DATE_SUB(DATE(`timestamp`), INTERVAL (WEEKDAY(DATE(`timestamp`)) + 1) % 7 DAY), metric, user_id
             ) AS bucket_count
         FROM metric_fact
     ),
     stats AS (
         SELECT
-            DATE_SUB(DATE(`timestamp`), INTERVAL WEEKDAY(DATE(`timestamp`)) DAY) AS week_start_date,
+            DATE_SUB(DATE(`timestamp`), INTERVAL (WEEKDAY(DATE(`timestamp`)) + 1) % 7 DAY) AS week_start_date,
             metric,
             unit,
             user_id,
@@ -88,7 +88,7 @@ BEGIN
             SUM(value) AS `sum`,
             COUNT(*) AS `count`
         FROM metric_fact
-        GROUP BY DATE_SUB(DATE(`timestamp`), INTERVAL WEEKDAY(DATE(`timestamp`)) DAY), metric, unit, user_id
+        GROUP BY DATE_SUB(DATE(`timestamp`), INTERVAL (WEEKDAY(DATE(`timestamp`)) + 1) % 7 DAY), metric, unit, user_id
     )
     SELECT
         stats.week_start_date,
