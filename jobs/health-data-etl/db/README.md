@@ -84,7 +84,7 @@ mysql --database your_database < db/refresh_aggregates.sql
 
 ## Aggregate Refresh Procedures
 
-The schema provides full-rebuild procedures (`refresh_metric_aggregate_day/week/month/year`) and incremental bucket procedures (`refresh_metric_aggregate_day_bucket/week_bucket/month_bucket/year_bucket`) that take `(user_id, metric, timestamp)` parameters. The full-rebuild procedures truncate and recompute from all fact rows; the bucket procedures upsert only the period bucket containing the given timestamp. Fitbit Collector uses the bucket procedures after each write for performance.
+The schema provides full-rebuild procedures (`refresh_metric_aggregate_day`, `refresh_metric_aggregate_week`, `refresh_metric_aggregate_month`, `refresh_metric_aggregate_year`) that truncate and recompute all aggregate buckets from the raw fact rows in `metric_fact`. Run these via `CALL refresh_metric_aggregates();` (which calls all four) to rebuild the entire set of aggregates after loading or modifying metric facts.
 
 ## Scope Notes
 
