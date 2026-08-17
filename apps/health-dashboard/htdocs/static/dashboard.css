@@ -247,21 +247,25 @@ body {
     color: #1c2a24;
 }
 
-#edit-name-form,
-#edit-height-form {
+#edit-user-form {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 16px;
 }
 
-#edit-name-form label,
-#edit-height-form label {
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
     font-weight: 500;
     color: #1c2a24;
 }
 
-#edit-name-form input,
-#edit-height-form input {
+.form-group input,
+.form-group select {
     padding: 10px 12px;
     border: 1px solid #aab7af;
     border-radius: 8px;
@@ -269,15 +273,14 @@ body {
     font-family: inherit;
 }
 
-#edit-name-form input:focus,
-#edit-height-form input:focus {
+.form-group input:focus,
+.form-group select:focus {
     outline: none;
     border-color: #204d3b;
     box-shadow: 0 0 0 3px rgba(32, 77, 59, 0.1);
 }
 
-#edit-name-form button,
-#edit-height-form button {
+#edit-user-form button {
     padding: 10px 16px;
     background: #204d3b;
     color: #f7f5ef;
@@ -287,10 +290,10 @@ body {
     font-size: 1rem;
     font-weight: 500;
     transition: background 0.2s;
+    margin-top: 8px;
 }
 
-#edit-name-form button:hover,
-#edit-height-form button:hover {
+#edit-user-form button:hover {
     background: #1a3a2e;
 }
 

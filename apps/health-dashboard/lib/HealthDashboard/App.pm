@@ -31,6 +31,7 @@ sub _render_authenticated_dashboard {
 	my $user = get_user_by_id_or_name(login => $user_id);
 	my $user_name = $user ? $user->{name} : 'User';
 	my $user_height = $user ? ($user->{height_mm} || '') : '';
+	my $user_gender = _normalize_gender($user ? ($user->{gender} || 'unknown') : 'unknown');
 
 	my $config = JSON::PP->new->ascii->canonical->encode({
 		defaultMetric => default_metric(),
@@ -39,6 +40,7 @@ sub _render_authenticated_dashboard {
 		userId => $user_id,
 		userName => $user_name,
 		userHeight => $user_height,
+		userGender => $user_gender,
 	});
 
 	return <<"HTML";
@@ -64,38 +66,43 @@ sub _render_authenticated_dashboard {
           <span></span>
         </button>
         <div id="menu" class="menu">
-          <button id="menu-edit-name" class="menu-item">Edit Name</button>
-          <button id="menu-edit-height" class="menu-item">Edit Height</button>
+          <button id="menu-edit-user" class="menu-item">Edit User</button>
           <button id="menu-logout" class="menu-item menu-logout">Logout</button>
         </div>
       </div>
     </section>
 
-    <div id="edit-name-modal" class="modal">
+    <div id="edit-user-modal" class="modal">
       <div class="modal-content">
         <span class="close">&times;</span>
-        <h2>Edit Name</h2>
-        <form id="edit-name-form">
-          <label for="new-name">Name:</label>
-          <input type="text" id="new-name" name="new-name" required maxlength="20">
-          <button type="submit">Save</button>
-        </form>
-      </div>
-    </div>
-
-    <div id="edit-height-modal" class="modal">
-      <div class="modal-content">
-        <span class="close">&times;</span>
-        <h2>Edit Height</h2>
-        <form id="edit-height-form">
-          <div class="height-unit-selector">
-            <label>
-              <input type="radio" name="height-unit" value="imperial" checked> Feet/Inches
-            </label>
-            <label>
-              <input type="radio" name="height-unit" value="metric"> Meters
-            </label>
+        <h2>Edit User</h2>
+        <form id="edit-user-form">
+          <div class="form-group">
+            <label for="user-name">Name:</label>
+            <input type="text" id="user-name" name="user-name" required maxlength="20">
           </div>
+
+          <div class="form-group">
+            <label for="user-gender">Gender:</label>
+            <select id="user-gender" name="user-gender">
+              <option value="unknown">Unknown</option>
+              <option value="male">Male</option>
+              <option value="female">Female</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label>Height:</label>
+            <div class="height-unit-selector">
+              <label>
+                <input type="radio" name="height-unit" value="imperial" checked> Feet/Inches
+              </label>
+              <label>
+                <input type="radio" name="height-unit" value="metric"> Meters
+              </label>
+            </div>
+          </div>
+
           <div id="imperial-inputs" class="height-inputs">
             <div class="height-input-group">
               <label for="height-feet">Feet:</label>
@@ -112,6 +119,7 @@ sub _render_authenticated_dashboard {
               <input type="number" id="height-meters" name="height-meters" min="0" step="0.01">
             </div>
           </div>
+
           <button type="submit">Save</button>
         </form>
       </div>
@@ -411,6 +419,16 @@ sub _percent_decode {
 	$value =~ tr/+/ /;
 	$value =~ s/%([0-9A-Fa-f]{2})/chr(hex($1))/eg;
 	return $value;
+}
+
+sub _normalize_gender {
+	my ($value) = @_;
+	return 'unknown' unless defined $value && length($value);
+
+	my $lower = lc($value);
+	return 'male' if $lower eq 'm' || $lower eq 'male';
+	return 'female' if $lower eq 'f' || $lower eq 'female';
+	return 'unknown';
 }
 
 1;

@@ -127,7 +127,7 @@ sub get_user_by_id_or_name {
 
 	my $dbh = connect_db();
 	my $user = $dbh->selectrow_hashref(
-		'SELECT id, name, height_mm, password_hash FROM `user` WHERE CAST(id AS CHAR) = ? OR name = ? LIMIT 1',
+		'SELECT id, name, height_mm, gender, password_hash FROM `user` WHERE CAST(id AS CHAR) = ? OR name = ? LIMIT 1',
 		undef,
 		$login,
 		$login
@@ -137,7 +137,7 @@ sub get_user_by_id_or_name {
 	return $user;
 }
 
-# Update a user field (name or height_mm)
+# Update a user field (name, height_mm, or gender)
 sub update_user_field {
 	my (%args) = @_;
 	my $user_id = $args{user_id};
@@ -149,6 +149,7 @@ sub update_user_field {
 	my %allowed_fields = (
 		name => 1,
 		height_mm => 1,
+		gender => 1,
 	);
 	return 0 unless $allowed_fields{$field};
 
@@ -157,6 +158,8 @@ sub update_user_field {
 		return 0 if !$value || length($value) > 20 || length($value) == 0;
 	} elsif ($field eq 'height_mm') {
 		return 0 if $value < 0 || $value > 2500000;  # Reasonable height limits in mm
+	} elsif ($field eq 'gender') {
+		return 0 unless $value =~ /^(M|F|male|female|unknown)$/i;
 	}
 
 	my $dbh = connect_db();

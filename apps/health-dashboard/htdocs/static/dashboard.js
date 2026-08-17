@@ -626,33 +626,27 @@ function setupMenu() {
     logout();
   });
 
-  document.getElementById('menu-edit-name').addEventListener('click', () => {
+  document.getElementById('menu-edit-user').addEventListener('click', () => {
     closeMenu();
-    openEditNameModal();
-  });
-
-  document.getElementById('menu-edit-height').addEventListener('click', () => {
-    closeMenu();
-    openEditHeightModal();
+    openEditUserModal();
   });
 }
 
-function openEditNameModal() {
+function openEditUserModal() {
   closeAllModals();
-  const modal = document.getElementById('edit-name-modal');
+  const modal = document.getElementById('edit-user-modal');
   modal.classList.add('active');
-  const nameInput = document.getElementById('new-name');
+
+  // Populate name
+  const nameInput = document.getElementById('user-name');
   if (config.userName) {
     nameInput.value = config.userName;
   }
-  nameInput.focus();
-  nameInput.select();
-}
 
-function openEditHeightModal() {
-  closeAllModals();
-  const modal = document.getElementById('edit-height-modal');
-  modal.classList.add('active');
+  // Populate gender
+  const genderSelect = document.getElementById('user-gender');
+  const gender = config.userGender || 'unknown';
+  genderSelect.value = gender.toLowerCase();
 
   // Populate height fields from stored value (in mm)
   const heightMm = parseInt(config.userHeight) || 0;
@@ -676,31 +670,24 @@ function openEditHeightModal() {
     metersInput.value = (heightMm / 1000).toFixed(2);
   }
 
-  feetInput.focus();
+  nameInput.focus();
+  nameInput.select();
 }
 
 function closeAllModals() {
-  document.getElementById('edit-name-modal').classList.remove('active');
-  document.getElementById('edit-height-modal').classList.remove('active');
+  document.getElementById('edit-user-modal').classList.remove('active');
 }
 
 function setupModals() {
-  const nameModal = document.getElementById('edit-name-modal');
-  const heightModal = document.getElementById('edit-height-modal');
+  const userModal = document.getElementById('edit-user-modal');
 
-  nameModal.querySelector('.close').addEventListener('click', closeAllModals);
-  heightModal.querySelector('.close').addEventListener('click', closeAllModals);
+  userModal.querySelector('.close').addEventListener('click', closeAllModals);
 
-  nameModal.addEventListener('click', (event) => {
-    if (event.target === nameModal) closeAllModals();
+  userModal.addEventListener('click', (event) => {
+    if (event.target === userModal) closeAllModals();
   });
 
-  heightModal.addEventListener('click', (event) => {
-    if (event.target === heightModal) closeAllModals();
-  });
-
-  document.getElementById('edit-name-form').addEventListener('submit', updateUserName);
-  document.getElementById('edit-height-form').addEventListener('submit', updateUserHeight);
+  document.getElementById('edit-user-form').addEventListener('submit', updateUserProfile);
 
   // Height unit switching
   const unitRadios = document.querySelectorAll('input[name="height-unit"]');
@@ -719,73 +706,69 @@ function setupModals() {
   });
 }
 
-async function updateUserName(event) {
-  event.preventDefault();
-  const newName = document.getElementById('new-name').value.trim();
-  if (!newName) return;
-
-  try {
-    const response = await fetch('api/auth.cgi', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'update_user', field: 'name', value: newName }),
-      credentials: 'include',
-    });
-    const data = await response.json();
-    if (data.success) {
-      config.userName = newName;
-      document.querySelector('.hero p').textContent = 'Welcome, ' + newName;
-      closeAllModals();
-    } else {
-      alert(data.error || 'Failed to update name');
-    }
-  } catch (error) {
-    alert('Error: ' + error.message);
-  }
-}
-
-async function updateUserHeight(event) {
+async function updateUserProfile(event) {
   event.preventDefault();
 
+  const newName = document.getElementById('user-name').value.trim();
+  const genderValue = document.getElementById('user-gender').value;
   const unit = document.querySelector('input[name="height-unit"]:checked').value;
-  let heightMm;
+
+  if (!newName) {
+    alert('Please enter a name');
+    return;
+  }
+
+  // Convert gender from display format (male/female) to storage format (M/F)
+  const genderDbValue = genderValue === 'male' ? 'M' : genderValue === 'female' ? 'F' : 'unknown';
+
+  let heightMm = null;
 
   if (unit === 'imperial') {
     const feet = parseFloat(document.getElementById('height-feet').value) || 0;
     const inches = parseFloat(document.getElementById('height-inches').value) || 0;
 
-    if (feet === 0 && inches === 0) {
-      alert('Please enter a height');
-      return;
+    if (feet > 0 || inches > 0) {
+      heightMm = Math.round((feet * 304.8) + (inches * 25.4));
     }
-
-    heightMm = Math.round((feet * 304.8) + (inches * 25.4));
   } else {
     const meters = parseFloat(document.getElementById('height-meters').value);
-
-    if (!meters || meters === 0) {
-      alert('Please enter a height');
-      return;
+    if (meters && meters > 0) {
+      heightMm = Math.round(meters * 1000);
     }
-
-    heightMm = Math.round(meters * 1000);
   }
 
   try {
-    const response = await fetch('api/auth.cgi', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'update_user', field: 'height_mm', value: heightMm }),
-      credentials: 'include',
-    });
-    const data = await response.json();
-    if (data.success) {
-      config.userHeight = heightMm;
-      closeAllModals();
-      alert('Height updated successfully');
-    } else {
-      alert(data.error || 'Failed to update height');
+    const updates = [
+      { field: 'name', value: newName },
+      { field: 'gender', value: genderDbValue },
+    ];
+
+    if (heightMm !== null) {
+      updates.push({ field: 'height_mm', value: heightMm });
     }
+
+    for (const update of updates) {
+      const response = await fetch('api/auth.cgi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'update_user', field: update.field, value: update.value }),
+        credentials: 'include',
+      });
+      const data = await response.json();
+      if (!data.success) {
+        alert(data.error || `Failed to update ${update.field}`);
+        return;
+      }
+    }
+
+    config.userName = newName;
+    config.userGender = genderValue;
+    if (heightMm !== null) {
+      config.userHeight = heightMm;
+    }
+
+    document.querySelector('.hero p').textContent = 'Welcome, ' + newName;
+    closeAllModals();
   } catch (error) {
     alert('Error: ' + error.message);
   }
