@@ -18,10 +18,10 @@ port=${MYSQL_PORT}
 EOF
 
 echo "Initializing database schema..."
-mysql --defaults-extra-file=.my.cnf "${MYSQL_DATABASE}" < db/schema.sql
+mysql --defaults-extra-file=.my.cnf "${MYSQL_DATABASE}" < db/schema/schema.sql
 
 echo "Running migrations..."
-for f in db/migrate_*.sql; do
+for f in db/migrations/migrate_*.sql; do
   # Skip check files
   [[ "$f" == *.check.sql ]] && continue
 
