@@ -22,8 +22,8 @@ dashboard-install:
 
 .PHONY: schema
 schema:
-	@. ./.env && mysql --host=$${MYSQL_HOST} --user=$${MYSQL_USER} --password=$${MYSQL_PASSWORD} $${MYSQL_DATABASE} < jobs/health-data-etl/db/schema.sql
-	@. ./.env && for f in jobs/health-data-etl/db/migrate_*.sql; do echo "Running $$f..."; mysql --host=$${MYSQL_HOST} --user=$${MYSQL_USER} --password=$${MYSQL_PASSWORD} $${MYSQL_DATABASE} < $$f; done
+	@. ./.env && mysql --host=$${MYSQL_HOST} --user=$${MYSQL_USER} --password=$${MYSQL_PASSWORD} $${MYSQL_DATABASE} < db/schema.sql
+	@. ./.env && for f in db/migrate_*.sql; do echo "Running $$f..."; mysql --host=$${MYSQL_HOST} --user=$${MYSQL_USER} --password=$${MYSQL_PASSWORD} $${MYSQL_DATABASE} < $$f; done
 
 .PHONY: etl-normalize
 etl-normalize:
