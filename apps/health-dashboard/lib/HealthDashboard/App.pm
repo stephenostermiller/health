@@ -5,6 +5,8 @@ use warnings;
 
 use Exporter 'import';
 use JSON::PP;
+use HTML::Entities qw(encode_entities);
+use Digest::SHA qw(sha1_hex);
 
 use HealthDashboard::Metrics qw(default_metric metrics_for_client metric_definition);
 use HealthDashboard::Queries qw(fetch_series_data validate_range supported_granularities);
@@ -15,21 +17,53 @@ our @EXPORT_OK = qw(render_dashboard_page render_series_response);
 sub render_dashboard_page {
 	my (%args) = @_;
 	my $cookie = $args{cookie};
+	my $nonce = _generate_nonce();
 
 	my $user_id = get_user_id_from_cookie(cookie => $cookie);
 
 	if (!defined $user_id || $user_id eq '') {
-		return _render_login_page();
+		my $body = _render_login_page(nonce => $nonce);
+		return _wrap_response(body => $body, nonce => $nonce);
 	}
 
-	return _render_authenticated_dashboard($user_id);
+	my $body = _render_authenticated_dashboard($user_id, nonce => $nonce);
+	return _wrap_response(body => $body, nonce => $nonce);
+}
+
+sub _generate_nonce {
+	return sha1_hex(rand() . time() . $$);
+}
+
+sub _build_security_headers {
+	my ($nonce) = @_;
+	return [
+		'X-Content-Type-Options', 'nosniff',
+		'X-Frame-Options', 'DENY',
+		'Referrer-Policy', 'strict-origin-when-cross-origin',
+		'Content-Security-Policy', "default-src 'self'; script-src 'self' 'nonce-$nonce'; style-src 'self' 'unsafe-inline'",
+	];
+}
+
+sub _wrap_response {
+	my (%args) = @_;
+	my $body = $args{body};
+	my $nonce = $args{nonce} || _generate_nonce();
+	my $headers = _build_security_headers($nonce);
+
+	return {
+		status => 200,
+		headers => $headers,
+		body => $body,
+	};
 }
 
 sub _render_authenticated_dashboard {
-	my ($user_id) = @_;
+	my ($user_id, %args) = @_;
+	my $nonce = $args{nonce} || '';
 
 	my $user = get_user_by_id_or_name(login => $user_id);
 	my $user_name = $user ? $user->{name} : 'User';
+	my $escaped_user_name = encode_entities($user_name);
 	my $user_height = $user ? ($user->{height_mm} || '') : '';
 	my $user_gender = _normalize_gender($user ? ($user->{gender} || 'unknown') : 'unknown');
 	my $user_unit_preference = $user ? ($user->{unit_preference} || 'imperial') : 'imperial';
@@ -48,6 +82,7 @@ sub _render_authenticated_dashboard {
 		userUsername => $user_username,
 		userInitials => $user_initials,
 	});
+	$config =~ s{</}{<\\/}g;
 
 	return <<"HTML";
 <!doctype html>
@@ -64,7 +99,7 @@ sub _render_authenticated_dashboard {
     <section class="hero">
       <div>
         <h1><img src="static/health.svg" alt="Health" style="height:1.2em;vertical-align:middle;margin-right:0.3em">Health dashboard</h1>
-        <p>Welcome, $user_name</p>
+        <p>Welcome, $escaped_user_name</p>
       </div>
       <div class="menu-container">
         <button id="menu-toggle" class="menu-toggle" aria-label="Menu">
@@ -193,7 +228,7 @@ sub _render_authenticated_dashboard {
     </section>
   </div>
 
-  <script>window.dashboardConfig = $config;</script>
+  <script nonce="$nonce">window.dashboardConfig = $config;</script>
   <script src="static/vendor/chart.umd.js"></script>
   <script src="static/dashboard.js"></script>
 </body>
@@ -259,6 +294,8 @@ sub render_series_response {
 }
 
 sub _render_login_page {
+	my (%args) = @_;
+	my $nonce = $args{nonce} || '';
 	return <<"HTML";
 <!doctype html>
 <html lang="en">
@@ -364,7 +401,7 @@ sub _render_login_page {
     </form>
   </div>
 
-  <script>
+  <script nonce="$nonce">
     document.getElementById('login-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       const login = document.getElementById('login').value;
@@ -379,7 +416,6 @@ sub _render_login_page {
 
         const data = await response.json();
         if (data.success) {
-          document.cookie = 'auth=' + data.cookie + '; path=/; max-age=2592000';
           window.location.reload();
         } else if (data.needsPassword) {
           const newPassword = prompt('Set a password for this account:');

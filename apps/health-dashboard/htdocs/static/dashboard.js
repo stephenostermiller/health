@@ -248,7 +248,12 @@ const config = window.dashboardConfig || {};
     items.forEach(([label, value]) => {
       const item = document.createElement('div');
       item.className = 'summary-item';
-      item.innerHTML = '<strong>' + label + '</strong><span>' + value + '</span>';
+      const strong = document.createElement('strong');
+      strong.textContent = label;
+      const span = document.createElement('span');
+      span.textContent = value;
+      item.appendChild(strong);
+      item.appendChild(span);
       container.appendChild(item);
     });
   }
@@ -887,8 +892,17 @@ const config = window.dashboardConfig || {};
 })();
 
 function logout() {
-  document.cookie = 'auth=; path=/; max-age=0';
-  window.location.reload();
+  fetch('api/auth.cgi', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'logout' }),
+    credentials: 'include',
+  }).then(() => {
+    window.location.reload();
+  }).catch((err) => {
+    console.error('Logout error:', err);
+    window.location.reload();
+  });
 }
 
 function setupMenu() {

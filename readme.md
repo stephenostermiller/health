@@ -39,7 +39,9 @@ Fitbit Aria scales are hard-coded to send data to `www.fitbit.com`. To make the 
    MYSQL_HOST=localhost
    MYSQL_PORT=3306
    HEALTH_DASHBOARD_HOST=health.localdomain
+   DASHBOARD_SECRET_KEY=abcd1234
    ```
+   **Important:** Generate a unique `DASHBOARD_SECRET_KEY` for each deployment with `openssl rand -hex 32`. This is required for dashboard authentication security.
 1. Run `make schema` to initialize the MySQL schema and run migrations.
 1. (Optional) Import historical weight and body fat data from a Google Takeout export:
    ```sh

@@ -8,14 +8,14 @@ use File::Spec;
 use File::Basename qw(dirname);
 use Cwd qw(abs_path);
 
-our @EXPORT_OK = qw(connect_db primary_user_id);
+our @EXPORT_OK = qw(connect_db primary_user_id load_env_file);
 
 my $_env_loaded = 0;
 
 sub connect_db {
 	require DBI;
 
-	_load_env_file();
+	load_env_file();
 
 	my $database = $ENV{MYSQL_DATABASE} || 'health';
 	my $host = $ENV{MYSQL_HOST} || 'localhost';
@@ -39,7 +39,7 @@ sub connect_db {
 	return $dbh;
 }
 
-sub _load_env_file {
+sub load_env_file {
 	return if $_env_loaded;
 
 	# Build path then normalize to resolve .. components

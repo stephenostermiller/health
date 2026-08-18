@@ -7,7 +7,7 @@ use Exporter 'import';
 use Digest::HMAC_SHA1 qw(hmac_sha1_hex);
 use MIME::Base64 qw(encode_base64 decode_base64);
 
-use HealthDashboard::DB qw(connect_db);
+use HealthDashboard::DB qw(connect_db load_env_file);
 use UserAuth qw(hash_password verify_password);
 
 our @EXPORT_OK = qw(
@@ -147,15 +147,17 @@ sub update_user_field {
 
 	return 0 unless defined $user_id && defined $field && defined $value;
 
-	my %allowed_fields = (
-		name => 1,
-		height_mm => 1,
-		gender => 1,
-		unit_preference => 1,
-		user_name => 1,
-		initials => 1,
+	my %field_to_column = (
+		name => '`name`',
+		height_mm => '`height_mm`',
+		gender => '`gender`',
+		unit_preference => '`unit_preference`',
+		user_name => '`user_name`',
+		initials => '`initials`',
 	);
-	return 0 unless $allowed_fields{$field};
+	return 0 unless $field_to_column{$field};
+
+	my $column = $field_to_column{$field};
 
 	# Validate field-specific constraints
 	if ($field eq 'name') {
@@ -174,7 +176,7 @@ sub update_user_field {
 
 	my $dbh = connect_db();
 	my $result = $dbh->do(
-		"UPDATE \`user\` SET $field = ? WHERE id = ?",
+		"UPDATE \`user\` SET $column = ? WHERE id = ?",
 		undef,
 		$value,
 		$user_id
@@ -221,10 +223,14 @@ sub user_has_data {
 	return $count > 0;
 }
 
-# Get or generate the secret key for signing cookies
-# In production, this should come from a config file or environment variable
+# Get the secret key for signing cookies
+# Must be set via DASHBOARD_SECRET_KEY environment variable
 sub get_secret_key {
-	return $ENV{DASHBOARD_SECRET_KEY} || 'change-me-in-production';
+	load_env_file();
+	my $key = $ENV{DASHBOARD_SECRET_KEY};
+	die "DASHBOARD_SECRET_KEY environment variable must be set\n" unless defined $key && length($key);
+	die "DASHBOARD_SECRET_KEY must be at least 32 characters\n" if length($key) < 32;
+	return $key;
 }
 
 1;

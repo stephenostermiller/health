@@ -15,10 +15,15 @@ my $cookie = _extract_auth_cookie();
 my $user_id = get_user_id_from_cookie(cookie => $cookie);
 
 unless (defined $user_id && length($user_id)) {
+	my $body = '{"error":"Not authenticated"}';
 	print "Status: 401 Unauthorized\r\n";
 	print "Content-Type: application/json\r\n";
-	print "Content-Length: 30\r\n\r\n";
-	print '{"error":"Not authenticated"}';
+	print "Content-Length: " . length($body) . "\r\n";
+	print "X-Content-Type-Options: nosniff\r\n";
+	print "X-Frame-Options: DENY\r\n";
+	print "Referrer-Policy: strict-origin-when-cross-origin\r\n";
+	print "\r\n";
+	print $body;
 	exit;
 }
 
@@ -33,6 +38,9 @@ print "Status: $status $status_text\r\n";
 while (my ($name, $value) = splice(@{$response->{headers}}, 0, 2)) {
 	print "$name: $value\r\n";
 }
+print "X-Content-Type-Options: nosniff\r\n";
+print "X-Frame-Options: DENY\r\n";
+print "Referrer-Policy: strict-origin-when-cross-origin\r\n";
 print "\r\n";
 print $response->{body};
 
