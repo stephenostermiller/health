@@ -41,10 +41,22 @@ if [ -z "${HEALTH_DASHBOARD_HOST:-}" ]; then
 	exit 1
 fi
 
+# Determine SSL configuration
 TMP_TARGET=$(mktemp)
 trap 'rm -f "$TMP_TARGET"' EXIT HUP INT TERM
 
-sed "s|HEALTH_DASHBOARD_DIR|$DIR|g;s|HEALTH_DASHBOARD_HOST|$HEALTH_DASHBOARD_HOST|g" "$TEMPLATE" > "$TMP_TARGET"
+if [ -n "${HEALTH_DASHBOARD_SSL_INCLUDE:-}" ]; then
+	# Custom SSL config: use Include directive
+	SSL_CONFIG="Include ${HEALTH_DASHBOARD_SSL_INCLUDE}"
+	sed "s|HEALTH_DASHBOARD_DIR|$DIR|g;s|HEALTH_DASHBOARD_HOST|$HEALTH_DASHBOARD_HOST|g;s|HEALTH_DASHBOARD_SSL_CONFIG|$SSL_CONFIG|g" "$TEMPLATE" > "$TMP_TARGET"
+else
+	# Standard SSL config: embed contents
+	SSL_CONTENT=$(cat "$DIR/apache/include/standard-ssl.conf")
+	awk -v ssl="$SSL_CONTENT" "
+		/HEALTH_DASHBOARD_SSL_CONFIG/ { print ssl; next }
+		{ gsub(/HEALTH_DASHBOARD_DIR/, \"$DIR\"); gsub(/HEALTH_DASHBOARD_HOST/, \"$HEALTH_DASHBOARD_HOST\"); print }
+	" "$TEMPLATE" > "$TMP_TARGET"
+fi
 
 
 CGI_MODE_OK=0
