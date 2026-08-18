@@ -33,6 +33,8 @@ sub _render_authenticated_dashboard {
 	my $user_height = $user ? ($user->{height_mm} || '') : '';
 	my $user_gender = _normalize_gender($user ? ($user->{gender} || 'unknown') : 'unknown');
 	my $user_unit_preference = $user ? ($user->{unit_preference} || 'imperial') : 'imperial';
+	my $user_username = $user ? ($user->{user_name} || '') : '';
+	my $user_initials = $user ? ($user->{initials} || '') : '';
 
 	my $config = JSON::PP->new->ascii->canonical->encode({
 		defaultMetric => default_metric(),
@@ -43,6 +45,8 @@ sub _render_authenticated_dashboard {
 		userHeight => $user_height,
 		userGender => $user_gender,
 		userUnitPreference => $user_unit_preference,
+		userUsername => $user_username,
+		userInitials => $user_initials,
 	});
 
 	return <<"HTML";
@@ -83,6 +87,16 @@ sub _render_authenticated_dashboard {
           <div class="form-group">
             <label for="user-name">Name:</label>
             <input type="text" id="user-name" name="user-name" required maxlength="20">
+          </div>
+
+          <div class="form-group">
+            <label for="user-username">User Name:</label>
+            <input type="text" id="user-username" name="user-username" maxlength="30">
+          </div>
+
+          <div class="form-group">
+            <label for="user-initials">Initials:</label>
+            <input type="text" id="user-initials" name="user-initials" maxlength="3">
           </div>
 
           <div class="form-group">

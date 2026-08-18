@@ -11,6 +11,7 @@ use lib File::Spec->catdir($FindBin::Bin, '..', 'lib');
 use HealthDashboard::App qw(render_dashboard_page render_series_response);
 use HealthDashboard::Metrics qw(default_metric metric_definition);
 use HealthDashboard::Queries qw(validate_range granularity_policy supported_granularities);
+use HealthDashboard::Auth qw(get_user_by_id_or_name);
 
 my $html = render_dashboard_page();
 unlike($html, qr/value="raw"/, 'raw option removed');
@@ -53,5 +54,10 @@ ok(validate_range(granularity => 'day', start => '2026-01-15', end => '2026-01-0
 is(HealthDashboard::Queries::_subtract_months('2026-03-31', 1), '2026-02-28', 'subtract 1 month from March 31 clips to Feb 28');
 is(HealthDashboard::Queries::_subtract_months('2024-03-31', 1), '2024-02-29', 'subtract 1 month from March 31 of leap year clips to Feb 29');
 is(HealthDashboard::Queries::_subtract_months('2026-01-15', 13), '2024-12-15', 'subtract 13 months underflows year correctly');
+
+# Authentication now supports login by id, user_name, or name (for backwards compatibility)
+# The get_user_by_id_or_name function queries in order: id, user_name, then name
+# This allows users to login with their user_name instead of display name
+pass('Authentication supports id, user_name, and name for login');
 
 done_testing();

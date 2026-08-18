@@ -739,6 +739,18 @@ function openEditUserModal() {
     nameInput.value = config.userName;
   }
 
+  // Populate user name
+  const usernameInput = document.getElementById('user-username');
+  if (config.userUsername) {
+    usernameInput.value = config.userUsername;
+  }
+
+  // Populate initials
+  const initialsInput = document.getElementById('user-initials');
+  if (config.userInitials) {
+    initialsInput.value = config.userInitials;
+  }
+
   // Populate gender
   const genderSelect = document.getElementById('user-gender');
   const gender = config.userGender || 'unknown';
@@ -820,6 +832,8 @@ async function updateUserProfile(event) {
   event.preventDefault();
 
   const newName = document.getElementById('user-name').value.trim();
+  const userName = document.getElementById('user-username').value.trim();
+  const initials = document.getElementById('user-initials').value.trim();
   const genderValue = document.getElementById('user-gender').value;
   const unitPreference = document.getElementById('unit-preference').value;
 
@@ -858,6 +872,14 @@ async function updateUserProfile(event) {
       updates.push({ field: 'height_mm', value: heightMm });
     }
 
+    if (userName) {
+      updates.push({ field: 'user_name', value: userName });
+    }
+
+    if (initials) {
+      updates.push({ field: 'initials', value: initials });
+    }
+
     for (const update of updates) {
       const response = await fetch('api/auth.cgi', {
         method: 'POST',
@@ -875,6 +897,8 @@ async function updateUserProfile(event) {
     config.userName = newName;
     config.userGender = genderValue;
     config.userUnitPreference = unitPreference;
+    config.userUsername = userName;
+    config.userInitials = initials;
     if (heightMm !== null) {
       config.userHeight = heightMm;
     }

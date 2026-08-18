@@ -34,7 +34,7 @@ sub authenticate_user {
 
 	my $dbh = connect_db();
 	my $user = $dbh->selectrow_hashref(
-		'SELECT id, password_hash FROM `user` WHERE CAST(id AS CHAR) = ? OR name = ? LIMIT 1',
+		'SELECT id, password_hash FROM `user` WHERE CAST(id AS CHAR) = ? OR user_name = ? LIMIT 1',
 		undef,
 		$login,
 		$login
@@ -85,7 +85,7 @@ sub user_exists {
 
 	my $dbh = connect_db();
 	my $count = $dbh->selectrow_array(
-		'SELECT COUNT(*) FROM `user` WHERE CAST(id AS CHAR) = ? OR name = ? LIMIT 1',
+		'SELECT COUNT(*) FROM `user` WHERE CAST(id AS CHAR) = ? OR user_name = ? LIMIT 1',
 		undef,
 		$login,
 		$login
@@ -118,7 +118,7 @@ sub set_user_password {
 	return $result > 0;
 }
 
-# Get user by id or name
+# Get user by id, user_name, or display name (for backwards compatibility)
 sub get_user_by_id_or_name {
 	my (%args) = @_;
 	my $login = $args{login};
@@ -127,8 +127,9 @@ sub get_user_by_id_or_name {
 
 	my $dbh = connect_db();
 	my $user = $dbh->selectrow_hashref(
-		'SELECT id, name, height_mm, gender, unit_preference, password_hash FROM `user` WHERE CAST(id AS CHAR) = ? OR name = ? LIMIT 1',
+		'SELECT id, name, height_mm, gender, unit_preference, password_hash, user_name, initials FROM `user` WHERE CAST(id AS CHAR) = ? OR user_name = ? OR name = ? LIMIT 1',
 		undef,
+		$login,
 		$login,
 		$login
 	);
@@ -137,7 +138,7 @@ sub get_user_by_id_or_name {
 	return $user;
 }
 
-# Update a user field (name, height_mm, gender, or unit_preference)
+# Update a user field (name, height_mm, gender, unit_preference, user_name, or initials)
 sub update_user_field {
 	my (%args) = @_;
 	my $user_id = $args{user_id};
@@ -151,6 +152,8 @@ sub update_user_field {
 		height_mm => 1,
 		gender => 1,
 		unit_preference => 1,
+		user_name => 1,
+		initials => 1,
 	);
 	return 0 unless $allowed_fields{$field};
 
@@ -163,6 +166,10 @@ sub update_user_field {
 		return 0 unless $value =~ /^(M|F|male|female|unknown)$/i;
 	} elsif ($field eq 'unit_preference') {
 		return 0 unless $value =~ /^(imperial|metric)$/i;
+	} elsif ($field eq 'user_name') {
+		return 0 if length($value) > 30;
+	} elsif ($field eq 'initials') {
+		return 0 if length($value) > 3;
 	}
 
 	my $dbh = connect_db();

@@ -46,12 +46,13 @@ sub _build_user {
 	my ($dbh, $user_id) = @_;
 
 	my $user_row = $dbh->selectrow_hashref(
-		'SELECT id, name, birthdate, gender, height_mm FROM `user` WHERE id = ?',
+		'SELECT id, name, birthdate, gender, height_mm, initials FROM `user` WHERE id = ?',
 		undef,
 		$user_id
 	) or die "User $user_id not found\n";
 
-	my $name = $user_row->{name};
+	my $initials = $user_row->{initials};
+	my $name_to_send = $initials || $user_row->{name} || $user_id;
 	my $age = age_from_birthdate($user_row->{birthdate});
 	my $gender = gender_to_enum($user_row->{gender});
 	my $height_mm = $user_row->{height_mm} // 0;
@@ -59,7 +60,7 @@ sub _build_user {
 	my $user = '';
 	$user .= _write_u32le($user_id);
 	$user .= pack('C16', 0) x 1;                  # padding
-	$user .= encode_name_field($name);            # name: ASCII, fixed 20-byte field
+	$user .= encode_name_field($name_to_send);    # initials (if set), name, or user_id: ASCII, fixed 20-byte field
 	$user .= _write_u32le(0);                     # min_weight_tolerance
 	$user .= _write_u32le(100000000);             # max_weight_tolerance
 	$user .= _write_u32le($age);
