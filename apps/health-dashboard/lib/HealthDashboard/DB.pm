@@ -10,6 +10,8 @@ use Cwd qw(abs_path);
 
 our @EXPORT_OK = qw(connect_db primary_user_id);
 
+my $_env_loaded = 0;
+
 sub connect_db {
 	require DBI;
 
@@ -38,7 +40,7 @@ sub connect_db {
 }
 
 sub _load_env_file {
-	return if $ENV{MYSQL_USER};
+	return if $_env_loaded;
 
 	# Build path then normalize to resolve .. components
 	my $env_file = abs_path(File::Spec->catfile(abs_path(__FILE__), '..', '..', '..', '..', '..', '.env'));
@@ -52,10 +54,11 @@ sub _load_env_file {
 		if ($line =~ /^\s*(\w+)\s*=\s*(.*)$/) {
 			my ($key, $value) = ($1, $2);
 			$value =~ s/^['"]|['"]$//g;
-			$ENV{$key} = $value unless exists $ENV{$key};
+			$ENV{$key} = $value if !exists $ENV{$key} || !$ENV{$key};
 		}
 	}
 	close($fh);
+	$_env_loaded = 1;
 }
 
 sub primary_user_id {
