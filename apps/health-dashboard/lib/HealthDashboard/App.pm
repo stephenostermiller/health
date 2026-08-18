@@ -7,7 +7,7 @@ use Exporter 'import';
 use JSON::PP;
 
 use HealthDashboard::Metrics qw(default_metric metrics_for_client metric_definition);
-use HealthDashboard::Queries qw(fetch_series_data validate_range granularity_policy supported_granularities);
+use HealthDashboard::Queries qw(fetch_series_data validate_range supported_granularities);
 use HealthDashboard::Auth qw(get_user_id_from_cookie authenticate_user create_auth_cookie set_user_password get_user_by_id_or_name user_exists);
 
 our @EXPORT_OK = qw(render_dashboard_page render_series_response);
@@ -39,7 +39,7 @@ sub _render_authenticated_dashboard {
 	my $config = JSON::PP->new->ascii->canonical->encode({
 		defaultMetric => default_metric(),
 		metrics => metrics_for_client(),
-		granularities => granularity_policy(),
+		granularities => supported_granularities(),
 		userId => $user_id,
 		userName => $user_name,
 		userHeight => $user_height,
@@ -149,7 +149,8 @@ sub _render_authenticated_dashboard {
       <div class="control">
         <label for="granularity">Granularity</label>
         <select id="granularity" name="granularity">
-          <option value="day" selected>Day</option>
+          <option value="auto" selected>Auto</option>
+          <option value="day">Day</option>
           <option value="week">Week</option>
           <option value="month">Month</option>
           <option value="year">Year</option>
@@ -205,7 +206,7 @@ sub render_series_response {
 	my $params = _parse_query_string($args{query_string} // '');
 	my $user_id = $args{user_id};
 	my $metric = $params->{metric} || default_metric();
-	my $granularity = $params->{granularity} || 'day';
+	my $granularity = $params->{granularity};
 	my $aggregation = $params->{aggregation} || 'range';
 	my $definition = metric_definition($metric);
 
@@ -213,9 +214,13 @@ sub render_series_response {
 		return _json_response(400, { error => 'Unknown metric' });
 	}
 
-	my %valid_granularity = map { $_ => 1 } supported_granularities();
-	if (!$valid_granularity{$granularity}) {
-		return _json_response(400, { error => 'Unsupported granularity' });
+	if (defined $granularity && $granularity ne 'auto') {
+		my %valid_granularity = map { $_ => 1 } supported_granularities();
+		if (!$valid_granularity{$granularity}) {
+			return _json_response(400, { error => 'Unsupported granularity' });
+		}
+	} else {
+		$granularity = undef;
 	}
 
 	my %valid_aggregation = map { $_ => 1 } qw(range mean min max);

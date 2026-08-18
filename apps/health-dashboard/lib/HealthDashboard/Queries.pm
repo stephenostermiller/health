@@ -9,7 +9,9 @@ use Time::Local qw(timegm);
 
 use HealthDashboard::DB qw(connect_db primary_user_id);
 
-our @EXPORT_OK = qw(fetch_series_data validate_range granularity_policy supported_granularities);
+our @EXPORT_OK = qw(fetch_series_data validate_range supported_granularities);
+
+my $MAX_DATA_POINTS = 800;
 
 my %AGGREGATES = (
 	day => {
@@ -17,21 +19,18 @@ my %AGGREGATES = (
 		period_column => 'day_date',
 		period_type => 'date',
 		default_span_days => 180,
-		max_span_days => 730,
 	},
 	week => {
 		table => 'metric_aggregate_week',
 		period_column => 'week_start_date',
 		period_type => 'date',
 		default_span_days => 728,
-		max_span_days => 1456,
 	},
 	month => {
 		table => 'metric_aggregate_month',
 		period_column => 'month_start_date',
 		period_type => 'date',
 		default_span_months => 36,
-		max_span_months => 288,
 	},
 	year => {
 		table => 'metric_aggregate_year',
@@ -43,10 +42,14 @@ my %AGGREGATES = (
 sub fetch_series_data {
 	my (%args) = @_;
 	my $metric = $args{metric} or die "metric is required\n";
-	my $granularity = $args{granularity} || 'day';
+	my $granularity = $args{granularity};
 	my $aggregation = $args{aggregation} || 'mean';
 	my $definition = $args{definition} || {};
 	my $user_id = $args{user_id} // primary_user_id();
+
+	if (!defined $granularity) {
+		$granularity = _select_granularity($args{start}, $args{end});
+	}
 
 	my $aggregate = $AGGREGATES{$granularity} or die "Unsupported granularity\n";
 	my $dbh = connect_db();
@@ -150,38 +153,26 @@ sub supported_granularities {
 	return sort keys %AGGREGATES;
 }
 
-sub granularity_policy {
-	my %policy;
-	for my $g (keys %AGGREGATES) {
-		my $agg = $AGGREGATES{$g};
-		my %entry;
-		$entry{maxSpanDays} = $agg->{max_span_days} if $agg->{max_span_days};
-		$entry{maxSpanMonths} = $agg->{max_span_months} if $agg->{max_span_months};
-		$policy{$g} = \%entry;
-	}
-	return \%policy;
-}
-
 sub validate_range {
 	my (%args) = @_;
-	my $granularity = $args{granularity} || 'day';
+	my $granularity = $args{granularity};
 	my ($start, $end) = @args{qw(start end)};
 
 	return undef if !defined $start || $start eq '' || !defined $end || $end eq '';
 
-	my $aggregate = $AGGREGATES{$granularity};
-	return undef unless $aggregate;
-
 	return 'Start date must be on or before end date' if $start gt $end;
 
-	if (_exceeds_max_span($aggregate, $start, $end)) {
-		my $limit;
-		if ($aggregate->{max_span_days}) {
-			$limit = "$aggregate->{max_span_days} days";
-		} elsif ($aggregate->{max_span_months}) {
-			$limit = "$aggregate->{max_span_months} months";
+	if (defined $granularity) {
+		my $aggregate = $AGGREGATES{$granularity};
+		return undef unless $aggregate;
+
+		my $points = _count_data_points($aggregate, $start, $end);
+		if ($points > $MAX_DATA_POINTS) {
+			return "Selected range would produce $points data points, exceeding the maximum of $MAX_DATA_POINTS";
 		}
-		return "Selected range exceeds the maximum span of $limit for $granularity granularity" if $limit;
+	} else {
+		my $selected = _select_granularity($start, $end);
+		return undef if $selected eq 'year';
 	}
 
 	return undef;
@@ -265,13 +256,35 @@ sub _year_of {
 	return $d;
 }
 
-sub _exceeds_max_span {
-	my ($aggregate, $start, $end) = @_;
-	return 0 if !$aggregate->{max_span_days} && !$aggregate->{max_span_months};
-	if ($aggregate->{max_span_days}) {
-		return (_epoch_for_date($end) - _epoch_for_date($start)) / 86400 > $aggregate->{max_span_days};
+sub _select_granularity {
+	my ($start, $end) = @_;
+	return 'year' if !defined $start || !defined $end || $start eq '' || $end eq '';
+
+	for my $g (qw(day week month year)) {
+		my $aggregate = $AGGREGATES{$g};
+		my $points = _count_data_points($aggregate, $start, $end);
+		return $g if $points <= $MAX_DATA_POINTS;
 	}
-	return $start lt _subtract_months($end, $aggregate->{max_span_months});
+	return 'year';
+}
+
+sub _count_data_points {
+	my ($aggregate, $start, $end) = @_;
+	if ($aggregate->{period_type} eq 'year') {
+		my ($start_year) = $start =~ /^(\d{4})/;
+		my ($end_year) = $end =~ /^(\d{4})/;
+		return $end_year - $start_year + 1;
+	}
+	if ($aggregate->{table} eq 'metric_aggregate_month') {
+		my ($start_y, $start_m) = $start =~ /^(\d{4})-(\d{2})/;
+		my ($end_y, $end_m) = $end =~ /^(\d{4})-(\d{2})/;
+		return ($end_y - $start_y) * 12 + ($end_m - $start_m) + 1;
+	}
+	if ($aggregate->{table} eq 'metric_aggregate_week') {
+		my $days = int((_epoch_for_date($end) - _epoch_for_date($start)) / 86400) + 1;
+		return int($days / 7) + 1;
+	}
+	return int((_epoch_for_date($end) - _epoch_for_date($start)) / 86400) + 1;
 }
 
 sub _epoch_for_date {

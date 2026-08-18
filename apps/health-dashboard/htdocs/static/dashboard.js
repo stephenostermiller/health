@@ -48,6 +48,29 @@ const config = window.dashboardConfig || {};
       { label: 'All data', allData: true, default: true },
       { label: 'Custom', custom: true },
     ],
+    auto: [
+      { label: 'Last 7 days', days: 7 },
+      { label: 'Last Month', months: 1 },
+      { label: 'Last 3 Months', months: 3 },
+      { label: 'Last 6 months', months: 6, default: true },
+      { label: 'Last Year', years: 1 },
+      { label: 'Last 2 years', years: 2 },
+      { label: 'Last 3 years', years: 3 },
+      { label: 'Last 5 years', years: 5 },
+      { label: 'Last 10 years', years: 10 },
+      { label: 'Last 15 years', years: 15 },
+      { label: 'Last 20 years', years: 20 },
+      { label: 'Last 25 years', years: 25 },
+      { label: 'Last 30 years', years: 30 },
+      { label: 'Last 40 years', years: 40 },
+      { label: 'Last 50 years', years: 50 },
+      { label: 'Last 60 years', years: 60 },
+      { label: 'Last 70 years', years: 70 },
+      { label: 'Last 80 years', years: 80 },
+      { label: 'Last 90 years', years: 90 },
+      { label: 'All data', allData: true },
+      { label: 'Custom', custom: true },
+    ],
   };
 
   function byId(id) {
@@ -144,6 +167,7 @@ const config = window.dashboardConfig || {};
   function validateSpan(granularity, start, end) {
     if (!start || !end) return null;
     if (start > end) return 'Start date must be on or before end date.';
+    if (granularity === 'auto') return null;
     const policy = (config.granularities && config.granularities[granularity]) || {};
     if (policy.maxSpanDays) {
       const days = (new Date(end) - new Date(start)) / 86400000;
@@ -469,9 +493,11 @@ const config = window.dashboardConfig || {};
     const granularity = byId('granularity').value;
     const params = new URLSearchParams({
       metric: byId('metric').value,
-      granularity: granularity,
       aggregation: byId('aggregation').value,
     });
+    if (granularity !== 'auto') {
+      params.append('granularity', granularity);
+    }
     if (start && end) {
       params.append('start', start);
       params.append('end', end);
@@ -487,7 +513,8 @@ const config = window.dashboardConfig || {};
       throw new Error(payload.error || 'Request failed');
     }
     applyRange(payload.range);
-    renderChart(payload, granularity);
+    const renderGranularity = granularity === 'auto' ? payload.granularity : granularity;
+    renderChart(payload, renderGranularity);
     updateSummary(payload, byId('aggregation').value);
     byId('chart-status').textContent = '';
   }
