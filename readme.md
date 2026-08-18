@@ -22,6 +22,7 @@ Fitbit Aria scales are hard-coded to send data to `www.fitbit.com`. To make the 
 
 ## Installation
 
+1. Make sure MySQL is running `sudo service mysql start`
 1. Create a MySQL database and user:
    ```sql
    CREATE DATABASE health_data;
@@ -40,9 +41,18 @@ Fitbit Aria scales are hard-coded to send data to `www.fitbit.com`. To make the 
    HEALTH_DASHBOARD_HOST=health.localdomain
    ```
 1. Run `make schema` to initialize the MySQL schema and run migrations.
-1. Run `make etl-load` to load any existing CSV exports.
-1. Set up `apps/fitbit-collector/` to ingest Fitbit Aria device uploads directly into the database.
-1. Configure `apps/health-dashboard/` to read from the same MySQL database and visualize metrics.
+1. (Optional) Import historical weight and body fat data from a Google Takeout export:
+   ```sh
+   jobs/health-data-etl/script/etl.pl /path/to/takeout-export.tgz
+   ```
+   See [jobs/health-data-etl/readme.md](jobs/health-data-etl/readme.md) for detailed instructions.
+1. Run `make install` to install the virtual host configs for the fitbit collector and the health dashboard into `/etc/apache2/`
+1. Restart or reload apache: `sudo service apache2 restart`
+1. Configure your local DNS server to override the IP address for `www.fitbit.com`
+1. Test that your scale uploads data.
+1. Log into the health dashboard. The password you use when you first log in will create the password in the database. If you imported data from Google Takeout you can use your email address from the import as the user name. Otherwise you will need to use your Fitbit user id. Your scale sends it when it uploads data and you can find it in the `metric_fact` table in the database.
+1. Once you have logged in, you can use the "edit user" functionality in the hamburger menu to set your user name.
+
 
 ## Common Commands
 
@@ -50,11 +60,9 @@ From the repository root:
 
 ```sh
 make schema      # Initialize database and run migrations
-make test
-make install
-make etl-normalize
-make etl-load
-make etl-refresh
+make test        # Run all test suites
+make install     # Install application dependencies
+jobs/health-data-etl/script/etl.pl /path/to/takeout-export.tgz  # Import historical data from Takeout
 ```
 
 Project-specific details:

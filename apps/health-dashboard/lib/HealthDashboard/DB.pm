@@ -19,7 +19,7 @@ sub connect_db {
 	my $host = $ENV{MYSQL_HOST} || 'localhost';
 	my $port = $ENV{MYSQL_PORT} || 3306;
 	my $user = $ENV{MYSQL_USER} || die "MYSQL_USER is required\n";
-	my $password = $ENV{MYSQL_PASSWORD} // '';
+	my $password = $ENV{MYSQL_PWD} // '';
 
 	my $dsn = "DBI:mysql:database=$database;host=$host;port=$port;charset=utf8mb4";
 	my $dbh = DBI->connect(

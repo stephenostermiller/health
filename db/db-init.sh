@@ -45,4 +45,7 @@ for f in db/migrations/migrate_*.sql; do
   fi
 done
 
+echo "Creating stored procedures..."
+mysql --defaults-extra-file="$MYCNF" "${MYSQL_DATABASE}" < db/utilities/refresh_aggregates.sql
+
 echo "Database schema initialized successfully"

@@ -1,5 +1,5 @@
 .PHONY: test
-test: collector-test dashboard-test
+test: collector-test dashboard-test etl-test
 
 .PHONY: collector-test
 collector-test:
@@ -8,6 +8,10 @@ collector-test:
 .PHONY: dashboard-test
 dashboard-test:
 	$(MAKE) -C apps/health-dashboard test
+
+.PHONY: etl-test
+etl-test:
+	$(MAKE) -C jobs/health-data-etl test
 
 .PHONY: install
 install: collector-install dashboard-install
@@ -23,15 +27,3 @@ dashboard-install:
 .PHONY: schema
 schema:
 	./db/db-init.sh
-
-.PHONY: etl-normalize
-etl-normalize:
-	$(MAKE) -C jobs/health-data-etl normalize
-
-.PHONY: etl-load
-etl-load:
-	$(MAKE) -C jobs/health-data-etl load
-
-.PHONY: etl-refresh
-etl-refresh:
-	$(MAKE) -C jobs/health-data-etl refresh

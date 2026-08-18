@@ -1,21 +1,3 @@
-CREATE TABLE IF NOT EXISTS csv_metric_stage (
-    id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    source_file VARCHAR(255) NOT NULL,
-    source_row BIGINT UNSIGNED NOT NULL,
-    `timestamp` DATETIME NOT NULL,
-    end_timestamp DATETIME NULL,
-    data_source VARCHAR(191) NULL,
-    metric VARCHAR(191) NOT NULL,
-    unit VARCHAR(32) NOT NULL DEFAULT '',
-    value DECIMAL(20,6) NOT NULL,
-    raw_row_json JSON NOT NULL,
-    loaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    UNIQUE KEY uq_csv_metric_stage_row (source_file, source_row, metric),
-    KEY idx_csv_metric_stage_metric_time (metric, `timestamp`),
-    KEY idx_csv_metric_stage_source (source_file)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS metric_fact (
     `timestamp` DATETIME NOT NULL,
     metric VARCHAR(191) NOT NULL,
@@ -23,7 +5,6 @@ CREATE TABLE IF NOT EXISTS metric_fact (
     user_id BIGINT UNSIGNED NOT NULL,
     value DECIMAL(20,6) NOT NULL,
     data_source VARCHAR(191) NULL,
-    end_timestamp DATETIME NULL,
     loaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`timestamp`, metric, user_id),
     KEY idx_metric_fact_metric_time (metric, `timestamp`),
