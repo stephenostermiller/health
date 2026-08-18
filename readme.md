@@ -34,7 +34,7 @@ Fitbit Aria scales are hard-coded to send data to `www.fitbit.com`. To make the 
    ```ini
    MYSQL_USER=health_user
    MYSQL_DATABASE=health_data
-   MYSQL_PASSWORD=your_secure_password
+   MYSQL_PWD=your_secure_password
    MYSQL_HOST=localhost
    MYSQL_PORT=3306
    HEALTH_DASHBOARD_HOST=health.localdomain

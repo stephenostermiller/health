@@ -1,6 +1,6 @@
 # Database Migrations
 
-This directory contains schema migrations that update the database incrementally. Migrations are run automatically by `script/db-init.sh` when initializing the database.
+This directory contains schema migrations that update the database incrementally. Migrations are run automatically by the init script (`../db-init.sh`) when initializing the database.
 
 ## Directory Structure
 
@@ -12,7 +12,7 @@ This directory contains schema migrations that update the database incrementally
 
 Migrations are SQL files in `migrations/` that modify the database schema. Each migration runs at most once via a check file system:
 
-1. The init script reads each `migrate_*.sql` file in filename order.
+1. The init script (`../db-init.sh`) reads each `migrate_*.sql` file in filename order.
 2. Before running, it checks if a corresponding `.check.sql` file exists.
 3. If the check file exists:
    - The script runs the check query and reads the result (0 or 1).
@@ -92,7 +92,7 @@ make schema
 Or manually:
 
 ```sh
-./script/db-init.sh
+./db/db-init.sh
 ```
 
 ## Troubleshooting

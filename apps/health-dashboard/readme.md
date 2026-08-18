@@ -17,7 +17,7 @@ This project is a Perl CGI web app that reads the ETL MySQL schema and renders h
 The dashboard reads a `.env` file in the project root (or environment variables) for:
 
 - `MYSQL_USER`
-- `MYSQL_PASSWORD`
+- `MYSQL_PWD`
 - `MYSQL_HOST`
 - `MYSQL_PORT`
 - `MYSQL_DATABASE`
@@ -27,7 +27,7 @@ Example `.env`:
 
 ```
 MYSQL_USER=your_username
-MYSQL_PASSWORD=your_password
+MYSQL_PWD=your_password
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
 MYSQL_DATABASE=health

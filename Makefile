@@ -22,7 +22,7 @@ dashboard-install:
 
 .PHONY: schema
 schema:
-	./script/db-init.sh
+	./db/db-init.sh
 
 .PHONY: etl-normalize
 etl-normalize:

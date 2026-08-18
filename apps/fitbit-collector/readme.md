@@ -36,7 +36,7 @@ The collector writes to MySQL and requires a `.env` file in the project root wit
 
 ```
 MYSQL_USER=your_username
-MYSQL_PASSWORD=your_password
+MYSQL_PWD=your_password
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
 MYSQL_DATABASE=health

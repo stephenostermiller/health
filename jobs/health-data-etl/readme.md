@@ -12,7 +12,7 @@ The schema, migrations, and SQL utilities are in the top-level `db/` directory (
 ## Prerequisites
 
 - MySQL 8.x
-- Environment variables for `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_HOST`, `MYSQL_PORT`, and `MYSQL_DATABASE`
+- Environment variables for `MYSQL_USER`, `MYSQL_PWD`, `MYSQL_HOST`, `MYSQL_PORT`, and `MYSQL_DATABASE`
 
 ## Load Workflow
 

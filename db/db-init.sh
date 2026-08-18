@@ -8,17 +8,19 @@ if [ ! -f .env ]; then
 fi
 source .env
 
-# Create .my.cnf from environment variables
-cat > .my.cnf <<EOF
+# Create config file for shared use
+MYCNF=".my.cnf"
+cat > "$MYCNF" <<EOF
 [client]
 host=${MYSQL_HOST}
 user=${MYSQL_USER}
-password=${MYSQL_PASSWORD}
+password=${MYSQL_PWD}
 port=${MYSQL_PORT}
 EOF
+chmod 600 "$MYCNF"
 
 echo "Initializing database schema..."
-mysql --defaults-extra-file=.my.cnf "${MYSQL_DATABASE}" < db/schema/schema.sql
+mysql --defaults-extra-file="$MYCNF" "${MYSQL_DATABASE}" < db/schema/schema.sql
 
 echo "Running migrations..."
 for f in db/migrations/migrate_*.sql; do
@@ -32,14 +34,14 @@ for f in db/migrations/migrate_*.sql; do
 
   # If check file exists, use it to determine whether to run
   if [ -f "$check_file" ]; then
-    result=$(mysql --defaults-extra-file=.my.cnf "${MYSQL_DATABASE}" -sN < "$check_file")
+    result=$(mysql --defaults-extra-file="$MYCNF" "${MYSQL_DATABASE}" -sN < "$check_file")
     should_run=$result
   fi
 
   # Run migration if should_run is non-zero
   if [ "$should_run" -gt 0 ]; then
     echo "Running $migration_name..."
-    mysql --defaults-extra-file=.my.cnf "${MYSQL_DATABASE}" < "$f"
+    mysql --defaults-extra-file="$MYCNF" "${MYSQL_DATABASE}" < "$f"
   fi
 done
 

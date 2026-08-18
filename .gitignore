@@ -6,3 +6,4 @@ tmp*
 .my.cnf
 plan-*
 __pycache__
+.my.cnf

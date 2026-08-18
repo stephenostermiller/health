@@ -23,4 +23,4 @@ The schema provides full-rebuild procedures (`refresh_metric_aggregate_day`, `re
 
 Migrations are incremental schema changes that modify the database structure over time. Each migration is a SQL file in `migrations/` that runs at most once via a check-file system: before running, a corresponding `.check.sql` file determines whether the migration has already been applied. This ensures that running schema initialization multiple times is safe and idempotent.
 
-Migrations are applied automatically when you run `make schema` or `./script/db-init.sh`. For details on creating new migrations, understanding check files, and troubleshooting, see [migrations/readme.md](migrations/readme.md).
+Migrations are applied automatically when you run `make schema` or `./db/db-init.sh`. For details on creating new migrations, understanding check files, and troubleshooting, see [migrations/readme.md](migrations/readme.md).
