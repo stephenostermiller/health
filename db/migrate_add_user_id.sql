@@ -1,6 +1,4 @@
--- One-time migration to add user_id column and add sum column to aggregates
--- Run this against an existing database before deploying the schema.sql changes
-
+-- Add user_id column and add sum column to aggregates
 ALTER TABLE metric_fact ADD COLUMN user_id BIGINT UNSIGNED NOT NULL DEFAULT 45016898;
 ALTER TABLE metric_fact DROP PRIMARY KEY;
 ALTER TABLE metric_fact ADD PRIMARY KEY (`timestamp`, metric, user_id);

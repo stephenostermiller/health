@@ -22,8 +22,7 @@ dashboard-install:
 
 .PHONY: schema
 schema:
-	@. ./.env && mysql --host=$${MYSQL_HOST} --user=$${MYSQL_USER} --password=$${MYSQL_PASSWORD} $${MYSQL_DATABASE} < db/schema.sql
-	@. ./.env && for f in db/migrate_*.sql; do echo "Running $$f..."; mysql --host=$${MYSQL_HOST} --user=$${MYSQL_USER} --password=$${MYSQL_PASSWORD} $${MYSQL_DATABASE} < $$f; done
+	./script/db-init.sh
 
 .PHONY: etl-normalize
 etl-normalize:

@@ -3,5 +3,6 @@ csv
 tmp*
 *tmp
 .env
+.my.cnf
 plan-*
 __pycache__
