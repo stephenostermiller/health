@@ -206,7 +206,13 @@ sub _available_range {
 sub _resolve_start_end {
 	my ($aggregate, $available, $start, $end) = @_;
 	my $has_explicit = defined $start && $start ne '' && defined $end && $end ne '';
-	return ($start, $end) if $has_explicit;
+	if ($has_explicit) {
+		my $granularity = $aggregate->{period_type};
+		$start = _round_to_week_start($start) if $granularity eq 'date' && $aggregate->{table} eq 'metric_aggregate_week';
+		$start = _round_to_month_start($start) if $granularity eq 'date' && $aggregate->{table} eq 'metric_aggregate_month';
+		$start = _round_to_year_start($start) if $granularity eq 'year';
+		return ($start, $end);
+	}
 	return (undef, undef) if !defined $available->{max};
 	return ($available->{min}, $available->{max}) if $aggregate->{period_type} eq 'year';
 
@@ -218,7 +224,33 @@ sub _resolve_start_end {
 		$start_default = _subtract_months($end_default, $aggregate->{default_span_months});
 	}
 	$start_default = $available->{min} if $available->{min} gt $start_default;
+
+	my $granularity = $aggregate->{period_type};
+	$start_default = _round_to_week_start($start_default) if $granularity eq 'date' && $aggregate->{table} eq 'metric_aggregate_week';
+	$start_default = _round_to_month_start($start_default) if $granularity eq 'date' && $aggregate->{table} eq 'metric_aggregate_month';
+	$start_default = _round_to_year_start($start_default) if $granularity eq 'year';
+
 	return ($start_default, $end_default);
+}
+
+sub _round_to_week_start {
+	my ($ymd) = @_;
+	my $epoch = _epoch_for_date($ymd);
+	my @gmtime = gmtime($epoch);
+	my $wday = $gmtime[6];
+	return _date_for_epoch($epoch - $wday * 86400);
+}
+
+sub _round_to_month_start {
+	my ($ymd) = @_;
+	my ($y, $m) = $ymd =~ /^(\d{4})-(\d{2})/;
+	return sprintf('%04d-%02d-01', $y, $m);
+}
+
+sub _round_to_year_start {
+	my ($ymd) = @_;
+	my ($y) = $ymd =~ /^(\d{4})/;
+	return sprintf('%04d-01-01', $y);
 }
 
 sub _period_bind_value {

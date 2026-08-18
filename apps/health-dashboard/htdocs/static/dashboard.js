@@ -89,17 +89,31 @@ const config = window.dashboardConfig || {};
     if (!period || period.custom || period.allData) return null;
 
     const today = new Date();
-    const endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    let endDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    if (granularity === 'week') {
+      const dayOfWeek = endDate.getDay();
+      endDate.setDate(endDate.getDate() - dayOfWeek);
+    } else if (granularity === 'month') {
+      endDate = new Date(endDate.getFullYear(), endDate.getMonth(), 31);
+    } else if (granularity === 'year') {
+      endDate = new Date(endDate.getFullYear(), 11, 31);
+    }
+
     let startDate = new Date(endDate);
 
     if (period.days) {
       startDate.setDate(startDate.getDate() - period.days);
     } else if (period.weeks) {
-      startDate.setDate(startDate.getDate() - period.weeks * 7);
+      startDate.setDate(startDate.getDate() - (period.weeks - 1) * 7);
     } else if (period.months) {
-      startDate.setMonth(startDate.getMonth() - period.months);
+      const targetMonth = startDate.getMonth() - period.months + 1;
+      const targetYear = startDate.getFullYear() + Math.floor(targetMonth / 12);
+      startDate.setDate(1);
+      startDate.setFullYear(targetYear);
+      startDate.setMonth((targetMonth % 12 + 12) % 12);
     } else if (period.years) {
-      startDate.setFullYear(startDate.getFullYear() - period.years);
+      startDate.setFullYear(startDate.getFullYear() - (period.years - 1));
     }
 
     const formatDate = (date) => date.toISOString().split('T')[0];
@@ -268,19 +282,64 @@ const config = window.dashboardConfig || {};
       chart.destroy();
     }
 
+    let labels = payload.labels;
+    let datasets = payload.datasets;
+
+    // For month granularity, fill in missing months with null values
+    if (granularity === 'month' && labels.length > 1) {
+      const allMonths = [];
+
+      // Parse start and end dates directly from strings to avoid timezone issues
+      const [startYear, startMonth] = labels[0].split('-').map(Number);
+      const [endYear, endMonth] = labels[labels.length - 1].split('-').map(Number);
+
+      // Generate all months in the range
+      let year = startYear;
+      let month = startMonth;
+      while (year < endYear || (year === endYear && month <= endMonth)) {
+        const dateStr = `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-01`;
+        allMonths.push(dateStr);
+        month++;
+        if (month > 12) {
+          month = 1;
+          year++;
+        }
+      }
+
+      // Create expanded datasets with nulls for missing months
+      datasets = datasets.map(dataset => ({
+        ...dataset,
+        data: allMonths.map((month, i) => {
+          const originalIndex = labels.indexOf(month);
+          return originalIndex >= 0 ? dataset.data[originalIndex] : null;
+        }),
+      }));
+
+      labels = allMonths;
+    }
+
     let converter, labelFormatter;
     if (granularity === 'year') {
       converter = yearToTimestamp;
       labelFormatter = (value) => new Date(value).getFullYear().toString();
     } else if (granularity === 'month') {
-      converter = monthToTimestamp;
-      labelFormatter = (value) => new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'short' });
+      converter = (label, index) => index;
+      labelFormatter = (value) => {
+        const index = Math.round(value);
+        if (index >= 0 && index < labels.length) {
+          const labelStr = labels[index]; // "2026-03-01"
+          const [year, month, day] = labelStr.split('-').map(Number);
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+          return `${monthNames[month - 1]} ${year}`;
+        }
+        return '';
+      };
     } else if (granularity === 'day') {
       converter = dayToTimestamp;
       labelFormatter = (value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     } else if (granularity === 'week') {
       converter = weekToTimestamp;
-      const years = payload.labels.map(label => {
+      const years = labels.map(label => {
         const [year] = label.split('-').map(Number);
         return year;
       });
@@ -302,7 +361,7 @@ const config = window.dashboardConfig || {};
       converter = dateToTimestamp;
 
       // Check if data spans multiple years
-      const years = payload.labels.map(label => new Date(label).getFullYear());
+      const years = labels.map(label => new Date(label).getFullYear());
       const spansMultipleYears = Math.min(...years) !== Math.max(...years);
 
       if (spansMultipleYears) {
@@ -312,7 +371,7 @@ const config = window.dashboardConfig || {};
       }
     }
 
-    timestamps = payload.labels.map(converter);
+    timestamps = labels.map((label, index) => converter(label, index));
     let minTime = Math.min(...timestamps);
     let maxTime = Math.max(...timestamps);
 
@@ -322,7 +381,7 @@ const config = window.dashboardConfig || {};
       if (granularity === 'year') {
         padding = 1000 * 60 * 60 * 24 * 365.25; // 1 year
       } else if (granularity === 'month') {
-        padding = 1000 * 60 * 60 * 24 * 30.44; // 1 month
+        padding = 0.5; // 0.5 index units for month
       } else if (granularity === 'week') {
         padding = 1000 * 60 * 60 * 24 * 7; // 1 week
       } else {
@@ -332,10 +391,11 @@ const config = window.dashboardConfig || {};
       maxTime += padding;
     }
 
-    const transformedDatasets = payload.datasets.map(dataset => ({
+    const transformedDatasets = datasets.map(dataset => ({
       ...dataset,
-      data: payload.labels.map((label, i) => ({
-        x: converter(label),
+      spanGaps: granularity === 'month',
+      data: labels.map((label, i) => ({
+        x: converter(label, i),
         y: dataset.data[i],
       })),
     }));
@@ -384,7 +444,7 @@ const config = window.dashboardConfig || {};
               ...(granularity === 'year' ? {
                 stepSize: 1000 * 60 * 60 * 24 * 365.25, // One year in milliseconds
               } : granularity === 'month' ? {
-                stepSize: 1000 * 60 * 60 * 24 * 30.44, // One month in milliseconds (365.25 / 12)
+                stepSize: 1,
               } : granularity === 'week' ? {
                 stepSize: 1000 * 60 * 60 * 24 * 7, // One week in milliseconds
               } : granularity === 'day' ? {
@@ -588,6 +648,15 @@ const config = window.dashboardConfig || {};
   }
 
 
+  function handleHashChange() {
+    const stateChanged = restoreStateFromHash();
+    if (stateChanged) {
+      loadSeries().catch((error) => {
+        byId('chart-status').textContent = error.message;
+      });
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     populateMetrics();
     const granularity = byId('granularity').value;
@@ -599,6 +668,8 @@ const config = window.dashboardConfig || {};
     byId('time-period').addEventListener('change', handleTimePeriodChange);
     byId('start').addEventListener('change', handleDateInputChange);
     byId('end').addEventListener('change', handleDateInputChange);
+
+    window.addEventListener('hashchange', handleHashChange);
 
     setupMenu();
     setupModals();
