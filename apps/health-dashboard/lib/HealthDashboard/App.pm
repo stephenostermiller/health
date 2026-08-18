@@ -39,7 +39,7 @@ sub _render_authenticated_dashboard {
 	my $config = JSON::PP->new->ascii->canonical->encode({
 		defaultMetric => default_metric(),
 		metrics => metrics_for_client(),
-		granularities => supported_granularities(),
+		granularities => [supported_granularities()],
 		userId => $user_id,
 		userName => $user_name,
 		userHeight => $user_height,

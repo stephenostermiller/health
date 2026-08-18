@@ -300,11 +300,171 @@ const config = window.dashboardConfig || {};
     return Date.UTC(yearNum + 1, 0, 1);
   }
 
+  function timestampToDate(value, granularity, labels, isEndDate) {
+    if (granularity === 'month') {
+      const index = Math.round(value);
+      if (index >= 0 && index < labels.length) {
+        return labels[index];
+      }
+      return null;
+    } else if (granularity === 'year') {
+      let closestYear = null;
+      let closestDistance = Infinity;
+
+      for (const label of labels) {
+        const labelYear = parseInt(label);
+        const labelTimestamp = yearToTimestamp(label);
+        const distance = Math.abs(labelTimestamp - value);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestYear = labelYear;
+        }
+      }
+
+      if (closestYear === null) {
+        return null;
+      }
+
+      if (isEndDate) {
+        return `${closestYear}-12-31`;
+      }
+      return `${closestYear}-01-01`;
+    } else if (granularity === 'day') {
+      const date = new Date(value);
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(date.getUTCDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } else if (granularity === 'week') {
+      const date = new Date(value);
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(date.getUTCDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    } else {
+      const date = new Date(value);
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(date.getUTCDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+  }
+
+  function setupChartDragSelection(canvas, granularity, labels) {
+    let isSelecting = false;
+    let startPixelX = null;
+    let endPixelX = null;
+    let selectionOverlay = null;
+
+    function createSelectionOverlay() {
+      if (selectionOverlay) selectionOverlay.remove();
+      selectionOverlay = document.createElement('div');
+      selectionOverlay.setAttribute('data-selection-overlay', 'true');
+      selectionOverlay.style.position = 'absolute';
+      selectionOverlay.style.pointerEvents = 'none';
+      selectionOverlay.style.zIndex = '10';
+      canvas.parentElement.style.position = 'relative';
+      canvas.parentElement.appendChild(selectionOverlay);
+      return selectionOverlay;
+    }
+
+    function updateSelectionOverlay(startX, endX) {
+      if (!selectionOverlay) return;
+      const canvasRect = canvas.getBoundingClientRect();
+      const parentRect = canvas.parentElement.getBoundingClientRect();
+      const left = Math.min(startX, endX);
+      const width = Math.abs(endX - startX);
+      const top = canvasRect.top - parentRect.top;
+      selectionOverlay.style.top = top + 'px';
+      selectionOverlay.style.left = left + 'px';
+      selectionOverlay.style.width = width + 'px';
+      selectionOverlay.style.height = canvasRect.height + 'px';
+      selectionOverlay.style.backgroundColor = 'rgba(100, 150, 255, 0.2)';
+      selectionOverlay.style.border = '2px solid rgba(100, 150, 255, 0.8)';
+      selectionOverlay.style.cursor = 'col-resize';
+    }
+
+    function onDocumentMouseMove(e) {
+      if (!isSelecting) return;
+      const canvasRect = canvas.getBoundingClientRect();
+      endPixelX = e.clientX - canvasRect.left;
+      updateSelectionOverlay(startPixelX, endPixelX);
+    }
+
+    function onDocumentMouseUp(e) {
+      if (!isSelecting) return;
+      isSelecting = false;
+      const canvasRect = canvas.getBoundingClientRect();
+      endPixelX = e.clientX - canvasRect.left;
+      canvas.style.cursor = 'default';
+      document.removeEventListener('mousemove', onDocumentMouseMove);
+      document.removeEventListener('mouseup', onDocumentMouseUp);
+
+      if (selectionOverlay) {
+        selectionOverlay.remove();
+        selectionOverlay = null;
+      }
+
+      const minPixelX = Math.min(startPixelX, endPixelX);
+      const maxPixelX = Math.max(startPixelX, endPixelX);
+
+      if (Math.abs(endPixelX - startPixelX) < 10) return;
+
+      const xScale = chart.scales.x;
+      const minValue = xScale.getValueForPixel(Math.max(0, minPixelX));
+      const maxValue = xScale.getValueForPixel(Math.min(canvas.offsetWidth, maxPixelX));
+
+      const startDate = timestampToDate(minValue, granularity, labels, false);
+      const endDate = timestampToDate(maxValue, granularity, labels, true);
+
+      if (!startDate || !endDate) return;
+
+      byId('time-period').value = 'Custom';
+      const periodOption = Array.from(byId('time-period').options).find(opt => opt.dataset.custom === 'true');
+      if (periodOption) {
+        byId('time-period').value = periodOption.value;
+      }
+
+      byId('start').value = startDate;
+      byId('end').value = endDate;
+      setDateInputVisibility(true);
+      byId('range-error').textContent = '';
+
+      const error = validateSpan(granularity, startDate, endDate);
+      byId('range-error').textContent = error || '';
+      if (!error) {
+        updateUrlHash();
+      }
+    }
+
+    canvas.addEventListener('mousedown', (e) => {
+      isSelecting = true;
+      const canvasRect = canvas.getBoundingClientRect();
+      startPixelX = e.clientX - canvasRect.left;
+      endPixelX = startPixelX;
+      createSelectionOverlay();
+      updateSelectionOverlay(startPixelX, endPixelX);
+      canvas.style.cursor = 'col-resize';
+      document.addEventListener('mousemove', onDocumentMouseMove);
+      document.addEventListener('mouseup', onDocumentMouseUp);
+    });
+  }
+
   function renderChart(payload, granularity) {
-    const context = byId('health-chart');
+    let context = byId('health-chart');
     if (chart) {
       chart.destroy();
     }
+
+    const parent = context.parentElement;
+
+    const existingOverlays = parent.querySelectorAll('[data-selection-overlay]');
+    existingOverlays.forEach(overlay => overlay.remove());
+
+    const newCanvas = context.cloneNode(true);
+    newCanvas.dataset.dragSetup = '';
+    context.replaceWith(newCanvas);
+    context = newCanvas;
 
     let labels = payload.labels;
     let datasets = payload.datasets;
@@ -485,6 +645,8 @@ const config = window.dashboardConfig || {};
         },
       },
     });
+
+    setupChartDragSelection(context, granularity, labels);
   }
 
   async function loadSeries() {
@@ -567,6 +729,9 @@ const config = window.dashboardConfig || {};
       if (dateRange) {
         byId('start').value = dateRange.start;
         byId('end').value = dateRange.end;
+      } else {
+        byId('start').value = '';
+        byId('end').value = '';
       }
       setDateInputVisibility(false);
       byId('range-error').textContent = '';
@@ -651,6 +816,8 @@ const config = window.dashboardConfig || {};
       const periodOption = Array.from(byId('time-period').options).find(opt => opt.value === period);
       if (periodOption) {
         byId('time-period').value = period;
+        byId('start').value = '';
+        byId('end').value = '';
         setDateInputVisibility(false);
         const dateRange = calculateDateRange(granularity, period);
         if (dateRange) {
@@ -760,42 +927,28 @@ function openEditUserModal() {
   const modal = document.getElementById('edit-user-modal');
   modal.classList.add('active');
 
-  // Populate name
+  // Clear and populate all form fields
   const nameInput = document.getElementById('user-name');
-  if (config.userName) {
-    nameInput.value = config.userName;
-  }
+  nameInput.value = config.userName || '';
 
-  // Populate user name
   const usernameInput = document.getElementById('user-username');
-  if (config.userUsername) {
-    usernameInput.value = config.userUsername;
-  }
+  usernameInput.value = config.userUsername || '';
 
-  // Populate initials
   const initialsInput = document.getElementById('user-initials');
-  if (config.userInitials) {
-    initialsInput.value = config.userInitials;
-  }
+  initialsInput.value = config.userInitials || '';
 
-  // Populate gender
   const genderSelect = document.getElementById('user-gender');
   const gender = config.userGender || 'unknown';
-  genderSelect.value = gender.toLowerCase();
+  genderSelect.value = gender;
 
-  // Populate unit preference
   const unitPreferenceSelect = document.getElementById('unit-preference');
   const unitPreference = config.userUnitPreference || 'imperial';
   unitPreferenceSelect.value = unitPreference;
 
-  // Populate height fields from stored value (in mm)
-  const heightMm = parseInt(config.userHeight) || 0;
-
+  // Clear height fields
   const feetInput = document.getElementById('height-feet');
   const inchesInput = document.getElementById('height-inches');
   const metersInput = document.getElementById('height-meters');
-
-  // Clear all fields first
   feetInput.value = '';
   inchesInput.value = '';
   metersInput.value = '';
@@ -811,6 +964,8 @@ function openEditUserModal() {
     metricInputs.style.display = 'none';
   }
 
+  // Populate height fields from stored value (in mm)
+  const heightMm = parseInt(config.userHeight) || 0;
   if (heightMm > 0) {
     // Convert to imperial
     const feet = Math.floor(heightMm / 304.8);
