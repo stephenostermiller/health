@@ -1,0 +1,4 @@
+SELECT IF(EXISTS(
+  SELECT 1 FROM information_schema.TABLES
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'metric_fact'
+), 0, 1);
