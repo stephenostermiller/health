@@ -525,7 +525,16 @@ const config = window.dashboardConfig || {};
       };
     } else if (granularity === 'day') {
       converter = dayToTimestamp;
-      labelFormatter = (value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const years = labels.map(label => {
+        const [year] = label.split('-').map(Number);
+        return year;
+      });
+      const spansMultipleYears = Math.min(...years) !== Math.max(...years);
+      if (spansMultipleYears) {
+        labelFormatter = (value) => new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+      } else {
+        labelFormatter = (value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
     } else if (granularity === 'week') {
       converter = weekToTimestamp;
       const years = labels.map(label => {
@@ -655,71 +664,84 @@ const config = window.dashboardConfig || {};
   }
 
   async function loadSeries() {
-    const start = byId('start').value;
-    const end = byId('end').value;
-    const granularity = byId('granularity').value;
-    const params = new URLSearchParams({
-      metric: byId('metric').value,
-      aggregation: byId('aggregation').value,
-    });
-    if (granularity !== 'auto') {
-      params.append('granularity', granularity);
-    }
-    if (start && end) {
-      params.append('start', start);
-      params.append('end', end);
-    }
-    byId('chart-status').textContent = 'Loading…';
+    try {
+      const start = byId('start').value;
+      const end = byId('end').value;
+      const granularity = byId('granularity').value;
+      const params = new URLSearchParams({
+        metric: byId('metric').value,
+        aggregation: byId('aggregation').value,
+      });
+      if (granularity !== 'auto') {
+        params.append('granularity', granularity);
+      }
+      if (start && end) {
+        params.append('start', start);
+        params.append('end', end);
+      }
+      byId('chart-status').textContent = 'Loading…';
 
-    const response = await fetch('api/series.cgi?' + params.toString(), {
-      headers: { Accept: 'application/json' },
-      credentials: 'include',
-    });
-    const payload = await response.json();
-    if (!response.ok) {
-      throw new Error(payload.error || 'Request failed');
+      const response = await fetch('api/series.cgi?' + params.toString(), {
+        headers: { Accept: 'application/json' },
+        credentials: 'include',
+      });
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || 'Request failed');
+      }
+      applyRange(payload.range);
+      const renderGranularity = granularity === 'auto' ? payload.granularity : granularity;
+      renderChart(payload, renderGranularity);
+      updateSummary(payload, byId('aggregation').value);
+      byId('chart-status').textContent = '';
+    } catch (error) {
+      if (chart) {
+        chart.destroy();
+        chart = null;
+      }
+      byId('chart-status').textContent = error.message;
     }
-    applyRange(payload.range);
-    const renderGranularity = granularity === 'auto' ? payload.granularity : granularity;
-    renderChart(payload, renderGranularity);
-    updateSummary(payload, byId('aggregation').value);
-    byId('chart-status').textContent = '';
   }
 
   function handleMetricChange(event) {
     updateUrlHash();
-    loadSeries().catch((error) => {
-      byId('chart-status').textContent = error.message;
-    });
+    loadSeries();
   }
 
   function handleGranularityChange(event) {
-    byId('start').value = '';
-    byId('end').value = '';
-    byId('range-error').textContent = '';
     const granularity = byId('granularity').value;
+    const prevStart = byId('start').value;
+    const prevEnd = byId('end').value;
+
+    byId('range-error').textContent = '';
     populateTimePeriods(granularity);
     setDateInputVisibility(false);
 
-    // Calculate date range for the new granularity's default time period
-    const periodLabel = byId('time-period').value;
-    const dateRange = calculateDateRange(granularity, periodLabel);
-    if (dateRange) {
-      byId('start').value = dateRange.start;
-      byId('end').value = dateRange.end;
+    if (prevStart && prevEnd) {
+      byId('start').value = prevStart;
+      byId('end').value = prevEnd;
+      byId('time-period').value = 'Custom';
+      const periodOption = Array.from(byId('time-period').options).find(opt => opt.dataset.custom === 'true');
+      if (periodOption) {
+        byId('time-period').value = periodOption.value;
+      }
+      setDateInputVisibility(true);
+    } else {
+      const periodLabel = byId('time-period').value;
+      const dateRange = calculateDateRange(granularity, periodLabel);
+      if (dateRange) {
+        byId('start').value = dateRange.start;
+        byId('end').value = dateRange.end;
+      }
     }
 
     updateUrlHash();
-    loadSeries().catch((error) => {
-      byId('chart-status').textContent = error.message;
-    });
+    loadSeries();
   }
 
   function handleAggregationChange(event) {
     updateUrlHash();
-    loadSeries().catch((error) => {
-      byId('chart-status').textContent = error.message;
-    });
+    loadSeries();
   }
 
   function handleTimePeriodChange(event) {
@@ -741,9 +763,7 @@ const config = window.dashboardConfig || {};
       setDateInputVisibility(false);
       byId('range-error').textContent = '';
       updateUrlHash();
-      loadSeries().catch((error) => {
-        byId('chart-status').textContent = error.message;
-      });
+      loadSeries();
     }
   }
 
@@ -755,9 +775,7 @@ const config = window.dashboardConfig || {};
     byId('range-error').textContent = error || '';
     if (!error && start && end) {
       updateUrlHash();
-      loadSeries().catch((error) => {
-        byId('chart-status').textContent = error.message;
-      });
+      loadSeries();
     }
   }
 
@@ -850,9 +868,7 @@ const config = window.dashboardConfig || {};
   function handleHashChange() {
     const stateChanged = restoreStateFromHash();
     if (stateChanged) {
-      loadSeries().catch((error) => {
-        byId('chart-status').textContent = error.message;
-      });
+      loadSeries();
     }
   }
 
@@ -885,9 +901,7 @@ const config = window.dashboardConfig || {};
       }
     }
 
-    loadSeries().catch((error) => {
-      byId('chart-status').textContent = error.message;
-    });
+    loadSeries();
   });
 })();
 

@@ -2,6 +2,7 @@ data
 csv
 tmp*
 *tmp
+*.tmp.*
 .env
 .my.cnf
 plan-*

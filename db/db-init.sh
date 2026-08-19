@@ -1,23 +1,9 @@
 #!/bin/bash
 set -e
 
-# Source .env file
-if [ ! -f .env ]; then
-  echo "Error: .env file not found"
-  exit 1
-fi
-source .env
-
-# Create config file for shared use
+# Setup MySQL configuration and load environment variables
+source ./db/setup-mysql-config.sh
 MYCNF=".my.cnf"
-cat > "$MYCNF" <<EOF
-[client]
-host=${MYSQL_HOST}
-user=${MYSQL_USER}
-password=${MYSQL_PWD}
-port=${MYSQL_PORT}
-EOF
-chmod 600 "$MYCNF"
 
 echo "Initializing database schema..."
 mysql --defaults-extra-file="$MYCNF" "${MYSQL_DATABASE}" < db/schema/schema.sql

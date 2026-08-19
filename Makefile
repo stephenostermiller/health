@@ -27,3 +27,7 @@ dashboard-install:
 .PHONY: schema
 schema:
 	./db/db-init.sh
+
+.PHONY: aggregates
+aggregates:
+	./db/refresh-aggregates.sh
