@@ -9,7 +9,12 @@ echo "Initializing database schema..."
 mysql --defaults-extra-file="$MYCNF" "${MYSQL_DATABASE}" < db/schema/schema.sql
 
 echo "Running migrations..."
-for f in db/migrations/migrate_*.sql; do
+migration_files=(db/migrations/migrate_*.sql)
+if [ "${HEALTH_DASHBOARD_DEMO:-0}" == "1" ]; then
+  migration_files+=(db/demo/migrate_*.sql)
+fi
+
+for f in "${migration_files[@]}"; do
   # Skip check files
   [[ "$f" == *.check.sql ]] && continue
 

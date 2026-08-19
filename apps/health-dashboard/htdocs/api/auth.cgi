@@ -8,6 +8,7 @@ use lib "$FindBin::Bin/../../lib";
 
 use JSON::PP;
 use HealthDashboard::Auth qw(authenticate_user create_auth_cookie set_user_password get_user_by_id_or_name user_exists update_user_field get_user_id_from_cookie create_user user_has_data);
+use HealthDashboard::DB qw(load_env_file);
 
 binmode(STDOUT);
 binmode(STDIN);
@@ -105,20 +106,28 @@ eval {
 		_clear_auth_cookie_header();
 		$response = { success => 1 };
 	} elsif ($action eq 'update_user') {
-		my $cookie = _extract_auth_cookie();
-		my $user_id = get_user_id_from_cookie(cookie => $cookie);
-		my $field = $data->{field};
-		my $value = $data->{value};
-
-		if (!$user_id) {
-			$response = { error => 'Not authenticated' };
-		} elsif (!$field || !defined $value) {
-			$response = { error => 'Field and value are required' };
+		{
+			no warnings;
+			eval { load_env_file() };
+		}
+		if ($ENV{HEALTH_DASHBOARD_DEMO}) {
+			$response = { error => 'User edits are disabled in demo mode' };
 		} else {
+			my $cookie = _extract_auth_cookie();
+			my $user_id = get_user_id_from_cookie(cookie => $cookie);
+			my $field = $data->{field};
+			my $value = $data->{value};
+
+			if (!$user_id) {
+				$response = { error => 'Not authenticated' };
+			} elsif (!$field || !defined $value) {
+				$response = { error => 'Field and value are required' };
+			} else {
 			if (update_user_field(user_id => $user_id, field => $field, value => $value)) {
 				$response = { success => 1 };
 			} else {
 				$response = { error => 'Failed to update user field' };
+			}
 			}
 		}
 	} else {

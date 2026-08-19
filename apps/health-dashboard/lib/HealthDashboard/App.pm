@@ -11,6 +11,7 @@ use Digest::SHA qw(sha1_hex);
 use HealthDashboard::Metrics qw(default_metric metrics_for_client metric_definition);
 use HealthDashboard::Queries qw(fetch_series_data validate_range supported_granularities);
 use HealthDashboard::Auth qw(get_user_id_from_cookie authenticate_user create_auth_cookie set_user_password get_user_by_id_or_name user_exists);
+use HealthDashboard::DB qw(load_env_file);
 
 our @EXPORT_OK = qw(render_dashboard_page render_series_response);
 
@@ -296,6 +297,12 @@ sub render_series_response {
 sub _render_login_page {
 	my (%args) = @_;
 	my $nonce = $args{nonce} || '';
+
+	load_env_file();
+	my $is_demo_mode = $ENV{HEALTH_DASHBOARD_DEMO} ? 1 : 0;
+	my $demo_login_value = $is_demo_mode ? 'value="demo"' : '';
+	my $demo_password_value = $is_demo_mode ? 'value="demo"' : '';
+
 	return <<"HTML";
 <!doctype html>
 <html lang="en">
@@ -391,11 +398,11 @@ sub _render_login_page {
     <form id="login-form">
       <div class="form-group">
         <label for="login">Name or User ID</label>
-        <input type="text" id="login" name="login" required autofocus>
+        <input type="text" id="login" name="login" required autofocus $demo_login_value>
       </div>
       <div class="form-group">
         <label for="password">Password</label>
-        <input type="password" id="password" name="password" required>
+        <input type="password" id="password" name="password" required $demo_password_value>
       </div>
       <button type="submit">Login</button>
     </form>

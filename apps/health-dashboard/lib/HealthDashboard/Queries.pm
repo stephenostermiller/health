@@ -7,7 +7,7 @@ use Exporter 'import';
 use JSON::PP;
 use Time::Local qw(timegm);
 
-use HealthDashboard::DB qw(connect_db primary_user_id);
+use HealthDashboard::DB qw(connect_db primary_user_id load_env_file);
 
 our @EXPORT_OK = qw(fetch_series_data validate_range supported_granularities);
 
@@ -40,6 +40,7 @@ my %AGGREGATES = (
 );
 
 sub fetch_series_data {
+	load_env_file();
 	my (%args) = @_;
 	my $metric = $args{metric} or die "metric is required\n";
 	my $granularity = $args{granularity};
@@ -53,6 +54,10 @@ sub fetch_series_data {
 
 	my $aggregate = $AGGREGATES{$granularity} or die "Unsupported granularity\n";
 	my $dbh = connect_db();
+
+	if ($ENV{HEALTH_DASHBOARD_DEMO}) {
+		$dbh->do('CALL update_demo_timestamps()');
+	}
 
 	my $available = _available_range($dbh, $aggregate, $metric, $user_id);
 	my ($start, $end) = _resolve_start_end($aggregate, $available, $args{start}, $args{end});
