@@ -969,6 +969,9 @@ function openEditUserModal() {
   const gender = config.userGender || 'unknown';
   genderSelect.value = gender;
 
+  const birthdateInput = document.getElementById('user-birthdate');
+  birthdateInput.value = config.userBirthdate || '';
+
   const unitPreferenceSelect = document.getElementById('unit-preference');
   const unitPreference = config.userUnitPreference || 'imperial';
   unitPreferenceSelect.value = unitPreference;
@@ -1045,6 +1048,7 @@ async function updateUserProfile(event) {
   const userName = document.getElementById('user-username').value.trim();
   const initials = document.getElementById('user-initials').value.trim();
   const genderValue = document.getElementById('user-gender').value;
+  const birthdate = document.getElementById('user-birthdate').value.trim();
   const unitPreference = document.getElementById('unit-preference').value;
 
   if (!newName) {
@@ -1082,6 +1086,10 @@ async function updateUserProfile(event) {
       updates.push({ field: 'height_mm', value: heightMm });
     }
 
+    if (birthdate) {
+      updates.push({ field: 'birthdate', value: birthdate });
+    }
+
     if (userName) {
       updates.push({ field: 'user_name', value: userName });
     }
@@ -1109,6 +1117,7 @@ async function updateUserProfile(event) {
     config.userUnitPreference = unitPreference;
     config.userUsername = userName;
     config.userInitials = initials;
+    config.userBirthdate = birthdate;
     if (heightMm !== null) {
       config.userHeight = heightMm;
     }

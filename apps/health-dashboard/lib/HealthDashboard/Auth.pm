@@ -127,7 +127,7 @@ sub get_user_by_id_or_name {
 
 	my $dbh = connect_db();
 	my $user = $dbh->selectrow_hashref(
-		'SELECT id, name, height_mm, gender, unit_preference, password_hash, user_name, initials FROM `user` WHERE CAST(id AS CHAR) = ? OR user_name = ? OR name = ? LIMIT 1',
+		'SELECT id, name, height_mm, gender, unit_preference, password_hash, user_name, initials, birthdate FROM `user` WHERE CAST(id AS CHAR) = ? OR user_name = ? OR name = ? LIMIT 1',
 		undef,
 		$login,
 		$login,
@@ -154,6 +154,7 @@ sub update_user_field {
 		unit_preference => '`unit_preference`',
 		user_name => '`user_name`',
 		initials => '`initials`',
+		birthdate => '`birthdate`',
 	);
 	return 0 unless $field_to_column{$field};
 
@@ -172,6 +173,8 @@ sub update_user_field {
 		return 0 if length($value) > 30;
 	} elsif ($field eq 'initials') {
 		return 0 if length($value) > 3;
+	} elsif ($field eq 'birthdate') {
+		return 0 unless $value =~ /^\d{4}-\d{2}-\d{2}$/;  # YYYY-MM-DD format
 	}
 
 	my $dbh = connect_db();

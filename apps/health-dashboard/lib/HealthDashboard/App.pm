@@ -70,6 +70,7 @@ sub _render_authenticated_dashboard {
 	my $user_unit_preference = $user ? ($user->{unit_preference} || 'imperial') : 'imperial';
 	my $user_username = $user ? ($user->{user_name} || '') : '';
 	my $user_initials = $user ? ($user->{initials} || '') : '';
+	my $user_birthdate = $user ? ($user->{birthdate} || '') : '';
 
 	my $config = JSON::PP->new->ascii->canonical->encode({
 		defaultMetric => default_metric(),
@@ -82,6 +83,7 @@ sub _render_authenticated_dashboard {
 		userUnitPreference => $user_unit_preference,
 		userUsername => $user_username,
 		userInitials => $user_initials,
+		userBirthdate => $user_birthdate,
 	});
 	$config =~ s{</}{<\\/}g;
 
@@ -142,6 +144,11 @@ sub _render_authenticated_dashboard {
               <option value="male">Male</option>
               <option value="female">Female</option>
             </select>
+          </div>
+
+          <div class="form-group">
+            <label for="user-birthdate">Birthdate:</label>
+            <input type="date" id="user-birthdate" name="user-birthdate">
           </div>
 
           <div class="form-group">
