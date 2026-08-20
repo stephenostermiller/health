@@ -425,7 +425,8 @@ sub _render_login_page {
         const response = await fetch('api/auth.cgi', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'login', login, password })
+          body: JSON.stringify({ action: 'login', login, password }),
+          credentials: 'include'
         });
 
         const data = await response.json();
@@ -437,7 +438,8 @@ sub _render_login_page {
             const setResponse = await fetch('api/auth.cgi', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ action: 'set_password', login, password: newPassword })
+              body: JSON.stringify({ action: 'set_password', login, password: newPassword }),
+              credentials: 'include'
             });
             const setData = await setResponse.json();
             if (setData.success) {

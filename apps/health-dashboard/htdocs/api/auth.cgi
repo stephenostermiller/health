@@ -31,11 +31,11 @@ sub _extract_auth_cookie {
 
 sub _set_auth_cookie_header {
 	my ($cookie_value) = @_;
-	push @extra_headers, 'Set-Cookie', "auth=$cookie_value; Path=/; Max-Age=2592000; HttpOnly; Secure; SameSite=Strict";
+	push @extra_headers, 'Set-Cookie', "auth=$cookie_value; Path=/; Max-Age=2592000; HttpOnly; SameSite=Lax";
 }
 
 sub _clear_auth_cookie_header {
-	push @extra_headers, 'Set-Cookie', 'auth=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Strict';
+	push @extra_headers, 'Set-Cookie', 'auth=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax';
 }
 
 eval {
