@@ -10,13 +10,23 @@ There are three components to this project:
 - `jobs/health-data-etl/` — Imports your historical weight and body fat data from Google Takeout.
 - `apps/health-dashboard/` — Shows your weight and body fat graphs in a web interface.
 
+## Demo
+
+The health dashboard demo is available at https://healthdemo.ostermiller.org/ the user and password are both "demo".
+
 ## Dependencies
 
-This project will run in a standard LAMP, WAMP, or MAMP (Linux/Windows/Mac, Perl, Apache, MySQL) environment.
+This project will run in a standard LAMP, WAMP, or MAMP (Linux/Windows/Mac, Perl, Apache, MySQL) environment. It is low-resource usage and will run on even the smallest computers such as a Raspberry Pi Zero W (~$15).
 
 - Perl (version 5.14+)
 - Apache (version 2.4+)
 - MySQL (version 8.0+)
+
+```sh
+# Dependency installation on Debian based systems such as Ubuntu or Raspberry Pi
+sudo apt-get install perl apache2 mysql-server make bash cpanminus libdbd-mysql-perl
+sudo cpanm install Crypt::Bcrypt File::Slurp HTML::Escape String::Util
+```
 
 Fitbit Aria scales are hard-coded to send data to `www.fitbit.com`. To make the scale connect to your local server, you will need the ability to override DNS locally to provide a different IP address for Fitbit's hostname.
 
@@ -39,25 +49,25 @@ Fitbit Aria scales are hard-coded to send data to `www.fitbit.com`. To make the 
    MYSQL_HOST=localhost
    MYSQL_PORT=3306
    HEALTH_DASHBOARD_HOST=health.localdomain
-   # Important for authentication security: Generate a unique `DASHBOARD_SECRET_KEY` for each deployment with `openssl rand -hex 32`.
+   # Important for authentication security:
+   # Generate a unique `DASHBOARD_SECRET_KEY` for each deployment
+   # with `openssl rand -hex 32`.
    DASHBOARD_SECRET_KEY=abcd1234
    # Optional: Path to custom SSL configuration. If omitted, uses standard SSL config.
    # HEALTH_DASHBOARD_SSL_INCLUDE=include/custom-ssl.conf
    ```
-
 1. Run `make schema` to initialize the MySQL schema and run migrations.
 1. (Optional) Import historical weight and body fat data from a Google Takeout export:
    ```sh
    jobs/health-data-etl/script/etl.pl /path/to/takeout-export.tgz
    ```
    See [jobs/health-data-etl/readme.md](jobs/health-data-etl/readme.md) for detailed instructions.
-1. Run `make install` to install the virtual host configs for the fitbit collector and the health dashboard into `/etc/apache2/`
+1. Run `sudo make install` to install the virtual host configs for the fitbit collector and the health dashboard into `/etc/apache2/`
 1. Restart or reload apache: `sudo service apache2 restart`
 1. Configure your local DNS server to override the IP address for `www.fitbit.com`
 1. Test that your scale uploads data.
 1. Log into the health dashboard. The password you use when you first log in will create the password in the database. If you imported data from Google Takeout you can use your email address from the import as the user name. Otherwise you will need to use your Fitbit user id. Your scale sends it when it uploads data and you can find it in the `metric_fact` table in the database.
 1. Once you have logged in, you can use the "edit user" functionality in the hamburger menu to set your user name.
-
 
 ## Common Commands
 
