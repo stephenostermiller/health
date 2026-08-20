@@ -689,6 +689,17 @@ const config = window.dashboardConfig || {};
       if (!response.ok) {
         throw new Error(payload.error || 'Request failed');
       }
+
+      // Convert weight from pounds to kilograms if metric preference is set
+      const unitPreference = byId('unit-preference').value;
+      if (payload.metric === 'weight' && unitPreference === 'metric') {
+        const lbsToKgRatio = 2.20462;
+        payload.unit = 'kilograms';
+        payload.datasets.forEach(dataset => {
+          dataset.data = dataset.data.map(value => value !== null && value !== undefined ? value / lbsToKgRatio : value);
+        });
+      }
+
       applyRange(payload.range);
       const renderGranularity = granularity === 'auto' ? payload.granularity : granularity;
       renderChart(payload, renderGranularity);
@@ -1112,6 +1123,7 @@ async function updateUserProfile(event) {
       }
     }
 
+    const unitPreferenceChanged = config.userUnitPreference !== unitPreference;
     config.userName = newName;
     config.userGender = genderValue;
     config.userUnitPreference = unitPreference;
@@ -1124,6 +1136,11 @@ async function updateUserProfile(event) {
 
     document.querySelector('.hero p').textContent = 'Welcome, ' + newName;
     closeAllModals();
+
+    // Reload the chart if unit preference changed and weight is displayed
+    if (unitPreferenceChanged && byId('metric').value === 'weight') {
+      loadSeries();
+    }
   } catch (error) {
     alert('Error: ' + error.message);
   }

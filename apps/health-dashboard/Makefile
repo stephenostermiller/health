@@ -7,7 +7,7 @@ test-perl:
 
 .PHONY: test-js
 test-js:
-	node t-js/*.js
+	for f in t-js/*.js; do node "$$f" || exit 1; done
 
 .PHONY: smoke
 smoke:

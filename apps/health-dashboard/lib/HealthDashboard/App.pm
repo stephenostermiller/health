@@ -154,8 +154,8 @@ sub _render_authenticated_dashboard {
           <div class="form-group">
             <label for="unit-preference">Unit Preference:</label>
             <select id="unit-preference" name="unit-preference">
-              <option value="imperial">Imperial (feet, inches)</option>
-              <option value="metric">Metric (meters)</option>
+              <option value="imperial">Imperial (pounds, feet, inches)</option>
+              <option value="metric">Metric (kilograms, meters)</option>
             </select>
           </div>
 
