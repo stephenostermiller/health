@@ -914,6 +914,9 @@ const config = window.dashboardConfig || {};
 
     loadSeries();
   });
+
+  // Expose loadSeries globally so it can be called from outside the IIFE
+  window.loadSeries = loadSeries;
 })();
 
 function logout() {
@@ -1139,7 +1142,7 @@ async function updateUserProfile(event) {
 
     // Reload the chart if unit preference changed and weight is displayed
     if (unitPreferenceChanged && document.getElementById('metric').value === 'weight') {
-      loadSeries();
+      window.loadSeries();
     }
   } catch (error) {
     alert('Error: ' + error.message);
