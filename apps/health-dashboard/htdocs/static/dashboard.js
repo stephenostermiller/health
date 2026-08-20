@@ -1138,7 +1138,7 @@ async function updateUserProfile(event) {
     closeAllModals();
 
     // Reload the chart if unit preference changed and weight is displayed
-    if (unitPreferenceChanged && byId('metric').value === 'weight') {
+    if (unitPreferenceChanged && document.getElementById('metric').value === 'weight') {
       loadSeries();
     }
   } catch (error) {
