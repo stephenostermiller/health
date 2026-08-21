@@ -14,7 +14,7 @@ etl-test:
 	$(MAKE) -C jobs/health-data-etl test
 
 .PHONY: install
-install: collector-install dashboard-install
+install: collector-install dashboard-install cron-install
 
 .PHONY: collector-install
 collector-install:
@@ -23,6 +23,10 @@ collector-install:
 .PHONY: dashboard-install
 dashboard-install:
 	$(MAKE) -C apps/health-dashboard install
+
+.PHONY: cron-install
+cron-install:
+	./db/backup-cron-install.sh
 
 .PHONY: schema
 schema:
