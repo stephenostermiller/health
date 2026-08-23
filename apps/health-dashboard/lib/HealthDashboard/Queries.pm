@@ -54,12 +54,15 @@ sub fetch_series_data {
 		$dbh->do('CALL update_demo_timestamps()');
 	}
 
+	# Look up available range once (using day aggregate as reference for all granularities)
+	my $day_aggregate = $AGGREGATES{day};
+	my $available = _available_range($dbh, $day_aggregate, $metric, $user_id);
+
 	if (!defined $granularity) {
-		$granularity = _select_granularity($args{start}, $args{end}, $dbh, $metric, $user_id);
+		$granularity = _select_granularity($args{start}, $args{end}, $available);
 	}
 
 	my $aggregate = $AGGREGATES{$granularity} or die "Unsupported granularity\n";
-	my $available = _available_range($dbh, $aggregate, $metric, $user_id);
 	my ($start, $end) = _resolve_start_end($aggregate, $available, $args{start}, $args{end});
 
 	my @bind = ($metric, $user_id);
@@ -210,16 +213,28 @@ sub _resolve_start_end {
 		return ($start, $end);
 	}
 	return (undef, undef) if !defined $available->{max};
+
+	# If both start and end are undefined, use the full available range
+	my $both_undefined = (!defined $start || $start eq '') && (!defined $end || $end eq '');
+	if ($both_undefined) {
+		$start = $available->{min};
+		$end = $available->{max};
+	}
+
 	return ($available->{min}, $available->{max}) if $aggregate->{period_type} eq 'year';
 
-	my $end_default = $available->{max};
+	my $end_default = $both_undefined ? $end : $available->{max};
 	my $start_default;
-	if ($aggregate->{default_span_days}) {
-		$start_default = _add_days($end_default, -$aggregate->{default_span_days});
+	if ($both_undefined) {
+		$start_default = $start;
 	} else {
-		$start_default = _subtract_months($end_default, $aggregate->{default_span_months});
+		if ($aggregate->{default_span_days}) {
+			$start_default = _add_days($end_default, -$aggregate->{default_span_days});
+		} else {
+			$start_default = _subtract_months($end_default, $aggregate->{default_span_months});
+		}
+		$start_default = $available->{min} if $available->{min} gt $start_default;
 	}
-	$start_default = $available->{min} if $available->{min} gt $start_default;
 
 	my $granularity = $aggregate->{period_type};
 	$start_default = _round_to_week_start($start_default) if $granularity eq 'date' && $aggregate->{table} eq 'metric_aggregate_week';
@@ -262,13 +277,10 @@ sub _year_of {
 }
 
 sub _select_granularity {
-	my ($start, $end, $dbh, $metric, $user_id) = @_;
+	my ($start, $end, $available) = @_;
 
-	# If start or end are undefined and we have database access, look them up
-	if ((!defined $start || $start eq '' || !defined $end || $end eq '') &&
-		defined $dbh && defined $metric && defined $user_id) {
-		my $aggregate = $AGGREGATES{day};
-		my $available = _available_range($dbh, $aggregate, $metric, $user_id);
+	# If start or end are undefined and we have available range info, use it
+	if ((!defined $start || $start eq '' || !defined $end || $end eq '') && defined $available) {
 		$start //= $available->{min};
 		$end //= $available->{max};
 	}
