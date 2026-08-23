@@ -449,8 +449,12 @@ const config = window.dashboardConfig || {};
       const minValue = xScale.getValueForPixel(Math.max(0, minPixelX));
       const maxValue = xScale.getValueForPixel(Math.min(canvas.offsetWidth, maxPixelX));
 
-      const startDate = timestampToDate(minValue, granularity, labels, false);
-      const endDate = timestampToDate(maxValue, granularity, labels, true);
+      let startDate = timestampToDate(minValue, granularity, labels, false);
+      let endDate = timestampToDate(maxValue, granularity, labels, true);
+
+      // Clamp to valid label range if outside bounds
+      if (!startDate) startDate = labels[0];
+      if (!endDate) endDate = labels[labels.length - 1];
 
       if (!startDate || !endDate) return;
 
