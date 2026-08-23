@@ -47,6 +47,7 @@ sub fetch_series_data {
 	my $aggregation = $args{aggregation} || 'mean';
 	my $definition = $args{definition} || {};
 	my $user_id = $args{user_id} // primary_user_id();
+	my ($start, $end) = @args{qw(start end)};
 
 	my $dbh = connect_db();
 
@@ -57,13 +58,11 @@ sub fetch_series_data {
 	# Look up available range once (using day aggregate as reference for all granularities)
 	my $day_aggregate = $AGGREGATES{day};
 	my $available = _available_range($dbh, $day_aggregate, $metric, $user_id);
-
-	if (!defined $granularity) {
-		$granularity = _select_granularity($args{start}, $args{end}, $available);
-	}
-
+	$start = $available->{min} if ($available->{min} && (!$start || $start lt $available->{min}));
+	$end = $available->{max} if ($available->{max} && (!$end || $end gt $available->{max}));
+	$granularity = _select_granularity($start, $end, $available) if (!defined $granularity);
 	my $aggregate = $AGGREGATES{$granularity} or die "Unsupported granularity\n";
-	my ($start, $end) = _resolve_start_end($aggregate, $available, $args{start}, $args{end});
+	($start, $end) = _resolve_start_end($aggregate, $available, $start, $end);
 
 	my @bind = ($metric, $user_id);
 	my @where = ('metric = ?', 'user_id = ?');

@@ -136,7 +136,7 @@ const config = window.dashboardConfig || {};
       startDate.setFullYear(targetYear);
       startDate.setMonth((targetMonth % 12 + 12) % 12);
     } else if (period.years) {
-      startDate.setFullYear(startDate.getFullYear() - (period.years - 1));
+      startDate.setFullYear(startDate.getFullYear() - period.years);
     }
 
     const formatDate = (date) => date.toISOString().split('T')[0];
