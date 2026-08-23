@@ -191,7 +191,7 @@ const config = window.dashboardConfig || {};
     if (range.end) e.value = range.end;
   }
 
-  function updateSummary(payload, aggregation) {
+  function updateSummary(payload, aggregation, granularity) {
     const container = byId('summary');
     container.innerHTML = '';
 
@@ -248,11 +248,18 @@ const config = window.dashboardConfig || {};
 
     const items = [
       ['Points', String(payload.labels.length)],
+    ];
+
+    if (granularity === 'auto' && payload.granularity) {
+      items.push(['Granularity', payload.granularity.charAt(0).toUpperCase() + payload.granularity.slice(1)]);
+    }
+
+    items.push(
       ['Minimum', minValue !== undefined ? formatValue(minValue) + ' (' + minDate + ')' : 'N/A'],
       ['Maximum', maxValue !== undefined ? formatValue(maxValue) + ' (' + maxDate + ')' : 'N/A'],
       ['Difference', difference !== undefined ? formatValue(difference) : 'N/A'],
       ['Average', avgValue !== undefined ? formatValue(avgValue) : 'N/A'],
-    ];
+    );
 
     items.forEach(([label, value]) => {
       const item = document.createElement('div');
@@ -741,7 +748,7 @@ const config = window.dashboardConfig || {};
       applyRange(payload.range);
       const renderGranularity = granularity === 'auto' ? payload.granularity : granularity;
       renderChart(payload, renderGranularity);
-      updateSummary(payload, byId('aggregation').value);
+      updateSummary(payload, byId('aggregation').value, granularity);
       byId('chart-status').textContent = '';
     } catch (error) {
       if (chart) {
