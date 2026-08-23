@@ -50,7 +50,7 @@ const config = window.dashboardConfig || {};
     ],
     auto: [
       { label: 'Last 7 days', days: 7 },
-      { label: 'Last Month', months: 1 },
+      { label: 'Last 30 days', days: 30 },
       { label: 'Last 3 Months', months: 3 },
       { label: 'Last 6 months', months: 6},
       { label: 'Last Year', years: 1 },
@@ -126,7 +126,7 @@ const config = window.dashboardConfig || {};
     let startDate = new Date(endDate);
 
     if (period.days) {
-      startDate.setDate(startDate.getDate() - period.days);
+      startDate.setDate(startDate.getDate() - period.days + 1);
     } else if (period.weeks) {
       startDate.setDate(startDate.getDate() - (period.weeks - 1) * 7);
     } else if (period.months) {
