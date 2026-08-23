@@ -237,12 +237,21 @@ const config = window.dashboardConfig || {};
 
     let difference = minValue !== undefined && maxValue !== undefined ? maxValue - minValue : undefined;
 
+    const formatValue = (value) => {
+      if (value === undefined || value === null) return 'N/A';
+      let decimals = 1;
+      if (payload.unit === 'kilograms') {
+        decimals = 2;
+      }
+      return value.toFixed(decimals);
+    };
+
     const items = [
       ['Points', String(payload.labels.length)],
-      ['Minimum', minValue !== undefined ? minValue.toFixed(2) + ' (' + minDate + ')' : 'N/A'],
-      ['Maximum', maxValue !== undefined ? maxValue.toFixed(2) + ' (' + maxDate + ')' : 'N/A'],
-      ['Difference', difference !== undefined ? difference.toFixed(2) : 'N/A'],
-      ['Average', avgValue !== undefined ? avgValue.toFixed(2) : 'N/A'],
+      ['Minimum', minValue !== undefined ? formatValue(minValue) + ' (' + minDate + ')' : 'N/A'],
+      ['Maximum', maxValue !== undefined ? formatValue(maxValue) + ' (' + maxDate + ')' : 'N/A'],
+      ['Difference', difference !== undefined ? formatValue(difference) : 'N/A'],
+      ['Average', avgValue !== undefined ? formatValue(avgValue) : 'N/A'],
     ];
 
     items.forEach(([label, value]) => {
@@ -256,6 +265,20 @@ const config = window.dashboardConfig || {};
       item.appendChild(span);
       container.appendChild(item);
     });
+  }
+
+  function roundMetricValue(value, unit, metric) {
+    if (value === null || value === undefined) return value;
+    if (metric === 'weight') {
+      if (unit === 'kilograms') {
+        return Math.round(value * 100) / 100;
+      } else {
+        return Math.round(value * 10) / 10;
+      }
+    } else if (metric === 'body_fat' || unit === 'percent') {
+      return Math.round(value * 10) / 10;
+    }
+    return value;
   }
 
   function dateToTimestamp(dateStr) {
@@ -692,11 +715,26 @@ const config = window.dashboardConfig || {};
 
       // Convert weight from pounds to kilograms if metric preference is set
       const unitPreference = byId('unit-preference').value;
-      if (payload.metric === 'weight' && unitPreference === 'metric') {
-        const lbsToKgRatio = 2.20462;
-        payload.unit = 'kilograms';
+      let displayUnit = payload.unit;
+      if (payload.metric === 'weight') {
+        if (unitPreference === 'metric') {
+          const lbsToKgRatio = 2.20462;
+          payload.unit = 'kilograms';
+          displayUnit = 'kilograms';
+          payload.datasets.forEach(dataset => {
+            dataset.data = dataset.data.map(value => roundMetricValue(value !== null && value !== undefined ? value / lbsToKgRatio : value, 'kilograms', 'weight'));
+          });
+        } else {
+          payload.datasets.forEach(dataset => {
+            dataset.data = dataset.data.map(value => roundMetricValue(value, 'pounds', 'weight'));
+          });
+        }
+      }
+
+      // Round body fat percentages
+      if (payload.metric === 'body_fat') {
         payload.datasets.forEach(dataset => {
-          dataset.data = dataset.data.map(value => value !== null && value !== undefined ? value / lbsToKgRatio : value);
+          dataset.data = dataset.data.map(value => roundMetricValue(value, 'percent', 'body_fat'));
         });
       }
 
