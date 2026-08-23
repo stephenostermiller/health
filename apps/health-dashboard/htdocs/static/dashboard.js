@@ -52,7 +52,7 @@ const config = window.dashboardConfig || {};
       { label: 'Last 7 days', days: 7 },
       { label: 'Last Month', months: 1 },
       { label: 'Last 3 Months', months: 3 },
-      { label: 'Last 6 months', months: 6, default: true },
+      { label: 'Last 6 months', months: 6},
       { label: 'Last Year', years: 1 },
       { label: 'Last 2 years', years: 2 },
       { label: 'Last 3 years', years: 3 },
@@ -68,7 +68,7 @@ const config = window.dashboardConfig || {};
       { label: 'Last 70 years', years: 70 },
       { label: 'Last 80 years', years: 80 },
       { label: 'Last 90 years', years: 90 },
-      { label: 'All data', allData: true },
+      { label: 'All data', allData: true, default: true  },
       { label: 'Custom', custom: true },
     ],
   };

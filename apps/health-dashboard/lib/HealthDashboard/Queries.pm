@@ -48,17 +48,17 @@ sub fetch_series_data {
 	my $definition = $args{definition} || {};
 	my $user_id = $args{user_id} // primary_user_id();
 
-	if (!defined $granularity) {
-		$granularity = _select_granularity($args{start}, $args{end});
-	}
-
-	my $aggregate = $AGGREGATES{$granularity} or die "Unsupported granularity\n";
 	my $dbh = connect_db();
 
 	if ($ENV{HEALTH_DASHBOARD_DEMO}) {
 		$dbh->do('CALL update_demo_timestamps()');
 	}
 
+	if (!defined $granularity) {
+		$granularity = _select_granularity($args{start}, $args{end}, $dbh, $metric, $user_id);
+	}
+
+	my $aggregate = $AGGREGATES{$granularity} or die "Unsupported granularity\n";
 	my $available = _available_range($dbh, $aggregate, $metric, $user_id);
 	my ($start, $end) = _resolve_start_end($aggregate, $available, $args{start}, $args{end});
 
@@ -262,7 +262,17 @@ sub _year_of {
 }
 
 sub _select_granularity {
-	my ($start, $end) = @_;
+	my ($start, $end, $dbh, $metric, $user_id) = @_;
+
+	# If start or end are undefined and we have database access, look them up
+	if ((!defined $start || $start eq '' || !defined $end || $end eq '') &&
+		defined $dbh && defined $metric && defined $user_id) {
+		my $aggregate = $AGGREGATES{day};
+		my $available = _available_range($dbh, $aggregate, $metric, $user_id);
+		$start //= $available->{min};
+		$end //= $available->{max};
+	}
+
 	return 'year' if !defined $start || !defined $end || $start eq '' || $end eq '';
 
 	for my $g (qw(day week month year)) {
