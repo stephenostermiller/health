@@ -148,10 +148,42 @@ body {
     color: #1c2a24;
 }
 
+.control-multi {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.control-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.control-field label {
+    font-size: 0.85rem;
+}
+
+.control-field select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #aab7af;
+    background: #fff;
+    color: #1c2a24;
+}
+
 .control button {
     background: #204d3b;
     color: #f7f5ef;
     cursor: pointer;
+}
+
+.time-period-control {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .chart-panel,#health-chart {
@@ -192,12 +224,35 @@ body {
     min-height: 1.2rem;
 }
 
-.date-control {
-    display: none !important;
+.date-inputs-container {
+    display: none;
 }
 
-.date-control.visible {
-    display: block !important;
+.date-inputs-container.visible {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.date-input-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.date-input-field label {
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.date-input-field input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #aab7af;
+    background: #fff;
+    color: #1c2a24;
 }
 
 .modal {

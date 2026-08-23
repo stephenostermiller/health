@@ -147,11 +147,11 @@ const config = window.dashboardConfig || {};
   }
 
   function setDateInputVisibility(isCustom) {
-    const dateControls = document.querySelectorAll('.date-control');
+    const dateInputsContainer = document.querySelector('.date-inputs-container');
     if (isCustom) {
-      dateControls.forEach(control => control.classList.add('visible'));
+      dateInputsContainer.classList.add('visible');
     } else {
-      dateControls.forEach(control => control.classList.remove('visible'));
+      dateInputsContainer.classList.remove('visible');
     }
   }
 
