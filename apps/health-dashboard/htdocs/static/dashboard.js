@@ -937,6 +937,7 @@ const config = window.dashboardConfig || {};
 
     setupMenu();
     setupModals();
+    setupLogoHome();
 
     const hasHashState = restoreStateFromHash();
 
@@ -969,6 +970,15 @@ function logout() {
     console.error('Logout error:', err);
     window.location.reload();
   });
+}
+
+function setupLogoHome() {
+  const logoHome = document.getElementById('logo-home');
+  if (logoHome) {
+    logoHome.addEventListener('click', () => {
+      window.location.href = window.location.pathname;
+    });
+  }
 }
 
 function setupMenu() {

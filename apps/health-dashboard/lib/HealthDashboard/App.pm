@@ -101,7 +101,7 @@ sub _render_authenticated_dashboard {
   <div class="page">
     <section class="hero">
       <div>
-        <h1><img src="static/health.svg" alt="Health" style="height:1.2em;vertical-align:middle;margin-right:0.3em">Health dashboard</h1>
+        <h1 id="logo-home"><img src="static/health.svg" alt="Health" style="height:1.2em;vertical-align:middle;margin-right:0.3em;cursor:pointer">Health dashboard</h1>
         <p>Welcome, $escaped_user_name</p>
       </div>
       <div class="menu-container">
