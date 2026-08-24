@@ -1,7 +1,13 @@
+html {
+    min-height: 100vh;
+}
+
 body {
     margin: 0;
+    min-height: 100vh;
     font-family: Georgia, "Times New Roman", serif;
     background: linear-gradient(180deg, #f8f4ea 0%, #e7efe7 100%);
+    background-attachment: fixed;
     color: #1c2a24;
 }
 
