@@ -191,6 +191,33 @@ const config = window.dashboardConfig || {};
     if (range.end) e.value = range.end;
   }
 
+  function formatDateForDisplay(dateStr, granularity, allLabels) {
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const spansMultipleYears = allLabels && allLabels.length > 0 && (() => {
+      const years = allLabels.map(label => {
+        if (granularity === 'year') {
+          return parseInt(label);
+        }
+        return new Date(label + 'T00:00:00Z').getFullYear();
+      });
+      return Math.min(...years) !== Math.max(...years);
+    })();
+
+    if (granularity === 'year') {
+      return dateStr;
+    } else if (granularity === 'month') {
+      const [year, month] = dateStr.split('-').map(Number);
+      return `${monthNames[month - 1]} ${year}`;
+    } else if (granularity === 'day' || granularity === 'week' || granularity === 'auto') {
+      const date = new Date(dateStr + 'T00:00:00Z');
+      if (spansMultipleYears) {
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+      } else {
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      }
+    }
+  }
+
   function updateSummary(payload, aggregation, granularity) {
     const container = byId('summary');
     container.innerHTML = '';
@@ -246,20 +273,34 @@ const config = window.dashboardConfig || {};
       return value.toFixed(decimals);
     };
 
-    const items = [
-      ['Points', String(payload.labels.length)],
-    ];
+    const formatValueWithUnit = (value) => {
+      if (value === undefined || value === null) return 'N/A';
+      return formatValue(value) + ' ' + (payload.unit || '');
+    };
 
+    const items = [];
+    const displayGranularity = granularity === 'auto' ? payload.granularity : granularity;
+
+    let pointsDisplay = '<strong>Points</strong> ' + String(payload.labels.length);
     if (granularity === 'auto' && payload.granularity) {
-      items.push(['Granularity', payload.granularity.charAt(0).toUpperCase() + payload.granularity.slice(1)]);
+      pointsDisplay += '<span style="display: block; margin-top: 8px;"><strong>Granularity</strong> ' + payload.granularity.charAt(0).toUpperCase() + payload.granularity.slice(1) + '</span>';
+    }
+    pointsDisplay += '<span style="display: block; margin-top: 8px;"><strong>Average</strong> ' + formatValueWithUnit(avgValue) + '</span>';
+    items.push(['', pointsDisplay]);
+
+    let minDisplay = minValue !== undefined ? formatValueWithUnit(minValue) : 'N/A';
+    if (minValue !== undefined && minDate) {
+      minDisplay += '<br>' + formatDateForDisplay(minDate, displayGranularity, payload.labels);
     }
 
-    items.push(
-      ['Minimum', minValue !== undefined ? formatValue(minValue) + ' (' + minDate + ')' : 'N/A'],
-      ['Maximum', maxValue !== undefined ? formatValue(maxValue) + ' (' + maxDate + ')' : 'N/A'],
-      ['Difference', difference !== undefined ? formatValue(difference) : 'N/A'],
-      ['Average', avgValue !== undefined ? formatValue(avgValue) : 'N/A'],
-    );
+    let maxDisplay = maxValue !== undefined ? formatValueWithUnit(maxValue) : 'N/A';
+    if (maxValue !== undefined && maxDate) {
+      maxDisplay += '<br>' + formatDateForDisplay(maxDate, displayGranularity, payload.labels);
+    }
+
+    let extremesDisplay = '<strong>Minimum</strong> ' + minDisplay + '<span style="display: block; margin-top: 8px;"><strong>Maximum</strong> ' + maxDisplay + '</span>';
+    extremesDisplay += '<span style="display: block; margin-top: 8px;"><strong>Difference</strong> ' + formatValueWithUnit(difference) + '</span>';
+    items.push(['', extremesDisplay]);
 
     items.forEach(([label, value]) => {
       const item = document.createElement('div');
@@ -267,7 +308,7 @@ const config = window.dashboardConfig || {};
       const strong = document.createElement('strong');
       strong.textContent = label;
       const span = document.createElement('span');
-      span.textContent = value;
+      span.innerHTML = value;
       item.appendChild(strong);
       item.appendChild(span);
       container.appendChild(item);
@@ -544,63 +585,40 @@ const config = window.dashboardConfig || {};
     let converter, labelFormatter;
     if (granularity === 'year') {
       converter = yearToTimestamp;
-      labelFormatter = (value) => new Date(value).getFullYear().toString();
+      labelFormatter = (value) => {
+        const year = new Date(value).getFullYear().toString();
+        return formatDateForDisplay(year, 'year', labels);
+      };
     } else if (granularity === 'month') {
       converter = (label, index) => index;
       labelFormatter = (value) => {
         const index = Math.round(value);
         if (index >= 0 && index < labels.length) {
-          const labelStr = labels[index]; // "2026-03-01"
-          const [year, month, day] = labelStr.split('-').map(Number);
-          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          return `${monthNames[month - 1]} ${year}`;
+          return formatDateForDisplay(labels[index], 'month', labels);
         }
         return '';
       };
     } else if (granularity === 'day') {
       converter = dayToTimestamp;
-      const years = labels.map(label => {
-        const [year] = label.split('-').map(Number);
-        return year;
-      });
-      const spansMultipleYears = Math.min(...years) !== Math.max(...years);
-      if (spansMultipleYears) {
-        labelFormatter = (value) => new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-      } else {
-        labelFormatter = (value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      }
+      labelFormatter = (value) => {
+        const date = new Date(value);
+        const dateStr = date.toISOString().split('T')[0];
+        return formatDateForDisplay(dateStr, 'day', labels);
+      };
     } else if (granularity === 'week') {
       converter = weekToTimestamp;
-      const years = labels.map(label => {
-        const [year] = label.split('-').map(Number);
-        return year;
-      });
-      const spansMultipleYears = Math.min(...years) !== Math.max(...years);
-      if (spansMultipleYears) {
-        labelFormatter = (value) => {
-          const date = new Date(value);
-          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          return `${monthNames[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()}`;
-        };
-      } else {
-        labelFormatter = (value) => {
-          const date = new Date(value);
-          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-          return `${monthNames[date.getUTCMonth()]} ${date.getUTCDate()}`;
-        };
-      }
+      labelFormatter = (value) => {
+        const date = new Date(value);
+        const dateStr = date.toISOString().split('T')[0];
+        return formatDateForDisplay(dateStr, 'week', labels);
+      };
     } else {
       converter = dateToTimestamp;
-
-      // Check if data spans multiple years
-      const years = labels.map(label => new Date(label).getFullYear());
-      const spansMultipleYears = Math.min(...years) !== Math.max(...years);
-
-      if (spansMultipleYears) {
-        labelFormatter = (value) => new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-      } else {
-        labelFormatter = (value) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-      }
+      labelFormatter = (value) => {
+        const date = new Date(value);
+        const dateStr = date.toISOString().split('T')[0];
+        return formatDateForDisplay(dateStr, 'auto', labels);
+      };
     }
 
     timestamps = labels.map((label, index) => converter(label, index));
