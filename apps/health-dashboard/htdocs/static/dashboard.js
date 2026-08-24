@@ -147,12 +147,14 @@ const config = window.dashboardConfig || {};
   }
 
   function setDateInputVisibility(isCustom) {
-    const dateInputsContainer = document.querySelector('.date-inputs-container');
-    if (isCustom) {
-      dateInputsContainer.classList.add('visible');
-    } else {
-      dateInputsContainer.classList.remove('visible');
-    }
+    const dateInputFields = document.querySelectorAll('.date-input-field');
+    dateInputFields.forEach(field => {
+      if (isCustom) {
+        field.style.display = '';
+      } else {
+        field.style.display = 'none';
+      }
+    });
   }
 
   function subtractCalendarMonths(ymd, n) {
@@ -281,26 +283,27 @@ const config = window.dashboardConfig || {};
     const items = [];
     const displayGranularity = granularity === 'auto' ? payload.granularity : granularity;
 
-    let pointsDisplay = '<strong>Points</strong> ' + String(payload.labels.length);
+    items.push(['', '<strong>Points</strong>' + String(payload.labels.length)]);
+
+    items.push(['', '<strong>Average</strong>' + formatValueWithUnit(avgValue)]);
+
     if (granularity === 'auto' && payload.granularity) {
-      pointsDisplay += '<span style="display: block; margin-top: 8px;"><strong>Granularity</strong> ' + payload.granularity.charAt(0).toUpperCase() + payload.granularity.slice(1) + '</span>';
+      items.push(['', '<strong>Granularity</strong>' + payload.granularity.charAt(0).toUpperCase() + payload.granularity.slice(1)]);
     }
-    pointsDisplay += '<span style="display: block; margin-top: 8px;"><strong>Average</strong> ' + formatValueWithUnit(avgValue) + '</span>';
-    items.push(['', pointsDisplay]);
 
     let minDisplay = minValue !== undefined ? formatValueWithUnit(minValue) : 'N/A';
     if (minValue !== undefined && minDate) {
       minDisplay += '<br>' + formatDateForDisplay(minDate, displayGranularity, payload.labels);
     }
+    items.push(['', '<strong>Minimum</strong>' + minDisplay]);
 
     let maxDisplay = maxValue !== undefined ? formatValueWithUnit(maxValue) : 'N/A';
     if (maxValue !== undefined && maxDate) {
       maxDisplay += '<br>' + formatDateForDisplay(maxDate, displayGranularity, payload.labels);
     }
+    items.push(['', '<strong>Maximum</strong>' + maxDisplay]);
 
-    let extremesDisplay = '<strong>Minimum</strong> ' + minDisplay + '<span style="display: block; margin-top: 8px;"><strong>Maximum</strong> ' + maxDisplay + '</span>';
-    extremesDisplay += '<span style="display: block; margin-top: 8px;"><strong>Difference</strong> ' + formatValueWithUnit(difference) + '</span>';
-    items.push(['', extremesDisplay]);
+    items.push(['', '<strong>Difference</strong>' + formatValueWithUnit(difference)]);
 
     items.forEach(([label, value]) => {
       const item = document.createElement('div');

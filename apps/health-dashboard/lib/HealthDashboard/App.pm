@@ -185,44 +185,40 @@ sub _render_authenticated_dashboard {
     </div>
 
     <form id="controls" class="controls">
-      <div class="control control-multi">
-        <div class="control-field">
-          <label for="metric">Metric</label>
-          <select id="metric" name="metric"></select>
-        </div>
-        <div class="control-field">
-          <label for="granularity">Granularity</label>
-          <select id="granularity" name="granularity">
-            <option value="auto" selected>Auto</option>
-            <option value="day">Day</option>
-            <option value="week">Week</option>
-            <option value="month">Month</option>
-            <option value="year">Year</option>
-          </select>
-        </div>
-        <div class="control-field">
-          <label for="aggregation">Aggregation</label>
-          <select id="aggregation" name="aggregation">
-            <option value="range" selected>Range (Min/Avg/Max)</option>
-            <option value="mean">Average</option>
-            <option value="min">Minimum</option>
-            <option value="max">Maximum</option>
-          </select>
-        </div>
+      <div class="control-field">
+        <label for="metric">Metric</label>
+        <select id="metric" name="metric"></select>
+      </div>
+      <div class="control control-field">
+        <label for="granularity">Granularity</label>
+        <select id="granularity" name="granularity">
+          <option value="auto" selected>Auto</option>
+          <option value="day">Day</option>
+          <option value="week">Week</option>
+          <option value="month">Month</option>
+          <option value="year">Year</option>
+        </select>
+      </div>
+      <div class="control-field">
+        <label for="aggregation">Aggregation</label>
+        <select id="aggregation" name="aggregation">
+          <option value="range" selected>Range (Min/Avg/Max)</option>
+          <option value="mean">Average</option>
+          <option value="min">Minimum</option>
+          <option value="max">Maximum</option>
+        </select>
       </div>
       <div class="control time-period-control">
         <label for="time-period">Time period</label>
         <select id="time-period" name="time-period"></select>
-        <div class="date-inputs-container">
-          <div class="date-input-field">
-            <label for="start">Start</label>
-            <input id="start" name="start" type="date">
-          </div>
-          <div class="date-input-field">
-            <label for="end">End</label>
-            <input id="end" name="end" type="date">
-          </div>
-        </div>
+      </div>
+      <div class="control date-input-field">
+        <label for="start">Start</label>
+        <input id="start" name="start" type="date">
+      </div>
+      <div class="control date-input-field">
+        <label for="end">End</label>
+        <input id="end" name="end" type="date">
       </div>
     </form>
 
