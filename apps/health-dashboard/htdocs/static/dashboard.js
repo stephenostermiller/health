@@ -2,6 +2,9 @@ const config = window.dashboardConfig || {};
 
 (function () {
   let chart;
+  let lastFetchTime = null;
+  let activityTimeout = null;
+  const REFRESH_INTERVAL_MS = 60 * 60 * 1000;
 
   const timePeriods = {
     day: [
@@ -736,6 +739,7 @@ const config = window.dashboardConfig || {};
       }
       byId('chart-status').textContent = 'Loading…';
 
+      params.append('_t', Date.now());
       const response = await fetch('api/series.cgi?' + params.toString(), {
         headers: { Accept: 'application/json' },
         credentials: 'include',
@@ -775,6 +779,7 @@ const config = window.dashboardConfig || {};
       renderChart(payload, renderGranularity);
       updateSummary(payload, byId('aggregation').value, granularity);
       byId('chart-status').textContent = '';
+      lastFetchTime = Date.now();
     } catch (error) {
       if (chart) {
         chart.destroy();
@@ -782,6 +787,31 @@ const config = window.dashboardConfig || {};
       }
       byId('chart-status').textContent = error.message;
     }
+  }
+
+  function checkAndRefresh() {
+    if (!lastFetchTime) return;
+    const timeSinceFetch = Date.now() - lastFetchTime;
+    if (timeSinceFetch > REFRESH_INTERVAL_MS) {
+      loadSeries();
+    }
+  }
+
+  function setupAutoRefresh() {
+    const handleActivity = () => {
+      if (!document.hasFocus()) return;
+
+      if (activityTimeout) clearTimeout(activityTimeout);
+      activityTimeout = setTimeout(() => {
+        if (document.hasFocus()) {
+          checkAndRefresh();
+        }
+      }, 500);
+    };
+
+    document.addEventListener('mousemove', handleActivity);
+    document.addEventListener('keydown', handleActivity);
+    document.addEventListener('scroll', handleActivity);
   }
 
   function handleMetricChange(event) {
@@ -970,6 +1000,7 @@ const config = window.dashboardConfig || {};
     setupMenu();
     setupModals();
     setupLogoHome();
+    setupAutoRefresh();
 
     const hasHashState = restoreStateFromHash();
 
