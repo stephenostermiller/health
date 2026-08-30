@@ -192,8 +192,6 @@ const config = window.dashboardConfig || {};
     const s = byId('start'), e = byId('end');
     if (range.availableMin) { s.min = range.availableMin; e.min = range.availableMin; }
     if (range.availableMax) { s.max = range.availableMax; e.max = range.availableMax; }
-    if (range.start) s.value = range.start;
-    if (range.end) e.value = range.end;
   }
 
   function formatDateForDisplay(dateStr, granularity, allLabels) {
@@ -549,6 +547,9 @@ const config = window.dashboardConfig || {};
 
     const newCanvas = context.cloneNode(true);
     newCanvas.dataset.dragSetup = '';
+    newCanvas.removeAttribute('style');
+    newCanvas.width = context.width || context.offsetWidth;
+    newCanvas.height = context.height || context.offsetHeight;
     context.replaceWith(newCanvas);
     context = newCanvas;
 
@@ -741,8 +742,12 @@ const config = window.dashboardConfig || {};
 
       params.append('_t', Date.now());
       const response = await fetch('api/series.cgi?' + params.toString(), {
-        headers: { Accept: 'application/json' },
+        headers: {
+          Accept: 'application/json',
+          'Cache-Control': 'no-cache, no-store, max-age=0',
+        },
         credentials: 'include',
+        cache: 'no-store',
       });
       const payload = await response.json();
       if (!response.ok) {
