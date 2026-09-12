@@ -829,7 +829,7 @@ const config = window.dashboardConfig || {};
 
     if (prevStart && prevEnd) {
       // Check if the current date range is valid for the new granularity
-      const error = validateSpan(granularity, prevStart, prevEnd);
+      const error = DataUtils.validateSpan(granularity, prevStart, prevEnd);
       if (error) {
         // Date range is invalid for new granularity, calculate adjusted range for 800 data points
         const adjusted = calculateAdjustedRange(granularity, prevStart, prevEnd);
@@ -890,7 +890,7 @@ const config = window.dashboardConfig || {};
     const granularity = byId('granularity').value;
     const start = byId('start').value;
     const end = byId('end').value;
-    const error = validateSpan(granularity, start, end);
+    const error = DataUtils.validateSpan(granularity, start, end);
     byId('range-error').textContent = error || '';
     if (!error && start && end) {
       updateUrlHash();
