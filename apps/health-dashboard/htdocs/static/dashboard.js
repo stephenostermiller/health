@@ -4,6 +4,7 @@ const config = window.dashboardConfig || {};
   let chart;
   let lastFetchTime = null;
   let activityTimeout = null;
+  let lastVisibleDateRange = null;
   const REFRESH_INTERVAL_MS = 60 * 60 * 1000;
 
   const timePeriods = {
@@ -169,10 +170,42 @@ const config = window.dashboardConfig || {};
     return `${String(newY).padStart(4,'0')}-${String(newM).padStart(2,'0')}-${String(newD).padStart(2,'0')}`;
   }
 
+  function calculateDataPoints(granularity, start, end) {
+    if (!start || !end) return 0;
+    const [startYear, startMonth, startDay] = start.split('-').map(Number);
+    const [endYear, endMonth, endDay] = end.split('-').map(Number);
+
+    if (granularity === 'year') {
+      return endYear - startYear + 1;
+    } else if (granularity === 'month') {
+      return (endYear - startYear) * 12 + (endMonth - startMonth) + 1;
+    } else if (granularity === 'week') {
+      const startDate = new Date(start + 'T00:00:00Z');
+      const endDate = new Date(end + 'T00:00:00Z');
+      const daysDiff = Math.floor((endDate - startDate) / 86400000);
+      const days = daysDiff + 1;
+      return Math.floor(days / 7) + 1;
+    } else if (granularity === 'day') {
+      const startDate = new Date(start + 'T00:00:00Z');
+      const endDate = new Date(end + 'T00:00:00Z');
+      const daysDiff = Math.floor((endDate - startDate) / 86400000);
+      return daysDiff + 1;
+    }
+    return 0;
+  }
+
   function validateSpan(granularity, start, end) {
     if (!start || !end) return null;
     if (start > end) return 'Start date must be on or before end date.';
     if (granularity === 'auto') return null;
+
+    // Check data points limit from config
+    const maxDataPoints = config.maxDataPoints || 800;
+    const dataPoints = calculateDataPoints(granularity, start, end);
+    if (dataPoints > maxDataPoints) {
+      return `Selected range would produce ${dataPoints} data points, exceeding the maximum of ${maxDataPoints}`;
+    }
+
     const policy = (config.granularities && config.granularities[granularity]) || {};
     if (policy.maxSpanDays) {
       const days = (new Date(end) - new Date(start)) / 86400000;
@@ -785,6 +818,14 @@ const config = window.dashboardConfig || {};
       updateSummary(payload, byId('aggregation').value, granularity);
       byId('chart-status').textContent = '';
       lastFetchTime = Date.now();
+
+      // Store the actual visible date range from the graph data
+      if (payload.labels && payload.labels.length > 0) {
+        lastVisibleDateRange = {
+          start: payload.labels[0],
+          end: payload.labels[payload.labels.length - 1],
+        };
+      }
     } catch (error) {
       if (chart) {
         chart.destroy();
@@ -834,8 +875,16 @@ const config = window.dashboardConfig || {};
     setDateInputVisibility(false);
 
     if (prevStart && prevEnd) {
-      byId('start').value = prevStart;
-      byId('end').value = prevEnd;
+      // Check if the current date range is valid for the new granularity
+      const error = validateSpan(granularity, prevStart, prevEnd);
+      if (error && lastVisibleDateRange) {
+        // Date range is invalid for new granularity, auto-adjust to visible range
+        byId('start').value = lastVisibleDateRange.start;
+        byId('end').value = lastVisibleDateRange.end;
+      } else {
+        byId('start').value = prevStart;
+        byId('end').value = prevEnd;
+      }
       byId('time-period').value = 'Custom';
       const periodOption = Array.from(byId('time-period').options).find(opt => opt.dataset.custom === 'true');
       if (periodOption) {

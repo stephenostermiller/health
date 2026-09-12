@@ -9,7 +9,7 @@ use HTML::Entities qw(encode_entities);
 use Digest::SHA qw(sha1_hex);
 
 use HealthDashboard::Metrics qw(default_metric metrics_for_client metric_definition);
-use HealthDashboard::Queries qw(fetch_series_data validate_range supported_granularities);
+use HealthDashboard::Queries qw(fetch_series_data validate_range supported_granularities max_data_points);
 use HealthDashboard::Auth qw(get_user_id_from_cookie authenticate_user create_auth_cookie set_user_password get_user_by_id_or_name user_exists);
 use HealthDashboard::DB qw(load_env_file);
 
@@ -76,6 +76,7 @@ sub _render_authenticated_dashboard {
 		defaultMetric => default_metric(),
 		metrics => metrics_for_client(),
 		granularities => [supported_granularities()],
+		maxDataPoints => max_data_points(),
 		userId => $user_id,
 		userName => $user_name,
 		userHeight => $user_height,

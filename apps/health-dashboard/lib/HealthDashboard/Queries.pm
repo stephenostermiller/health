@@ -9,9 +9,13 @@ use Time::Local qw(timegm);
 
 use HealthDashboard::DB qw(connect_db primary_user_id load_env_file);
 
-our @EXPORT_OK = qw(fetch_series_data validate_range supported_granularities);
+our @EXPORT_OK = qw(fetch_series_data validate_range supported_granularities max_data_points);
 
 my $MAX_DATA_POINTS = 800;
+
+sub max_data_points {
+	return $MAX_DATA_POINTS;
+}
 
 my %AGGREGATES = (
 	day => {
