@@ -1,18 +1,7 @@
 #!/usr/bin/env node
 
 const assert = require('assert');
-
-// Simulate the conversion logic from loadSeries
-function convertWeightPayload(payload, unitPreference) {
-  if (payload.metric === 'weight' && unitPreference === 'metric') {
-    const lbsToKgRatio = 2.20462;
-    payload.unit = 'kilograms';
-    payload.datasets.forEach(dataset => {
-      dataset.data = dataset.data.map(value => value !== null && value !== undefined ? value / lbsToKgRatio : value);
-    });
-  }
-  return payload;
-}
+const WeightUtils = require('../htdocs/static/weight-utils.js');
 
 // Test 1: Weight conversion when metric preference is set
 console.log('Test 1: Weight conversion to kilograms');
@@ -26,7 +15,7 @@ const payload1 = {
     }
   ]
 };
-const converted = convertWeightPayload(JSON.parse(JSON.stringify(payload1)), 'metric');
+const converted = WeightUtils.convertWeightPayload(JSON.parse(JSON.stringify(payload1)), 'metric');
 assert.strictEqual(converted.unit, 'kilograms', 'Unit should be converted to kilograms');
 assert.strictEqual(converted.datasets[0].data[0], 200 / 2.20462, 'First value should be converted from pounds to kg');
 assert.strictEqual(converted.datasets[0].data[1], 195 / 2.20462, 'Second value should be converted from pounds to kg');
@@ -44,7 +33,7 @@ const payload2 = {
     }
   ]
 };
-const unconverted = convertWeightPayload(JSON.parse(JSON.stringify(payload2)), 'imperial');
+const unconverted = WeightUtils.convertWeightPayload(JSON.parse(JSON.stringify(payload2)), 'imperial');
 assert.strictEqual(unconverted.unit, 'pounds', 'Unit should remain as pounds');
 assert.strictEqual(unconverted.datasets[0].data[0], 200, 'Value should not be converted');
 console.log('✓ Values remain unchanged when unit preference is imperial');
@@ -61,7 +50,7 @@ const payload3 = {
     }
   ]
 };
-const bodyFatPayload = convertWeightPayload(JSON.parse(JSON.stringify(payload3)), 'metric');
+const bodyFatPayload = WeightUtils.convertWeightPayload(JSON.parse(JSON.stringify(payload3)), 'metric');
 assert.strictEqual(bodyFatPayload.unit, 'percent', 'Unit should remain as percent for body_fat metric');
 assert.strictEqual(bodyFatPayload.datasets[0].data[0], 25, 'Body fat value should not be converted');
 console.log('✓ Non-weight metrics are not converted');
@@ -78,7 +67,7 @@ const payload4 = {
     }
   ]
 };
-const convertedWithNulls = convertWeightPayload(JSON.parse(JSON.stringify(payload4)), 'metric');
+const convertedWithNulls = WeightUtils.convertWeightPayload(JSON.parse(JSON.stringify(payload4)), 'metric');
 assert.strictEqual(convertedWithNulls.datasets[0].data[0], 200 / 2.20462, 'Non-null value should be converted');
 assert.strictEqual(convertedWithNulls.datasets[0].data[1], null, 'Null value should remain null');
 assert.strictEqual(convertedWithNulls.datasets[0].data[2], 0 / 2.20462, 'Zero value should be converted');
@@ -105,7 +94,7 @@ const payload5 = {
     }
   ]
 };
-const multiConverted = convertWeightPayload(JSON.parse(JSON.stringify(payload5)), 'metric');
+const multiConverted = WeightUtils.convertWeightPayload(JSON.parse(JSON.stringify(payload5)), 'metric');
 assert.strictEqual(multiConverted.datasets.length, 3, 'Should have 3 datasets');
 for (let i = 0; i < multiConverted.datasets.length; i++) {
   for (let j = 0; j < multiConverted.datasets[i].data.length; j++) {

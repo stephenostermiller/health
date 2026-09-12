@@ -240,6 +240,8 @@ sub _render_authenticated_dashboard {
   <script nonce="$nonce">window.dashboardConfig = $config;</script>
   <script src="static/vendor/chart.umd.js"></script>
   <script src="static/granularity-utils.js"></script>
+  <script src="static/data-utils.js"></script>
+  <script src="static/weight-utils.js"></script>
   <script src="static/dashboard.js"></script>
 </body>
 </html>
