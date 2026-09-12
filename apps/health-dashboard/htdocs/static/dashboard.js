@@ -220,6 +220,21 @@ const config = window.dashboardConfig || {};
     return null;
   }
 
+  function calculateAdjustedRange(granularity, originalStart, originalEnd) {
+    // Uses shared utility from granularity-utils.js (loaded via script tag)
+    if (typeof GranularityUtils === 'undefined') {
+      console.error('GranularityUtils not loaded');
+      return { start: originalStart, end: originalEnd };
+    }
+    return GranularityUtils.calculateAdjustedRange(
+      granularity,
+      originalStart,
+      originalEnd,
+      lastVisibleDateRange,
+      config.maxDataPoints || 800
+    );
+  }
+
   function applyRange(range) {
     if (!range) return;
     const s = byId('start'), e = byId('end');
@@ -877,10 +892,11 @@ const config = window.dashboardConfig || {};
     if (prevStart && prevEnd) {
       // Check if the current date range is valid for the new granularity
       const error = validateSpan(granularity, prevStart, prevEnd);
-      if (error && lastVisibleDateRange) {
-        // Date range is invalid for new granularity, auto-adjust to visible range
-        byId('start').value = lastVisibleDateRange.start;
-        byId('end').value = lastVisibleDateRange.end;
+      if (error) {
+        // Date range is invalid for new granularity, calculate adjusted range for 800 data points
+        const adjusted = calculateAdjustedRange(granularity, prevStart, prevEnd);
+        byId('start').value = adjusted.start;
+        byId('end').value = adjusted.end;
       } else {
         byId('start').value = prevStart;
         byId('end').value = prevEnd;
